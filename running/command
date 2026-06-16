@@ -1,0 +1,9 @@
+ RGRID_TO_BASIS rgrid.rf c.bf
+ ESTIMATE_W_BASIS c.bf w.bf
+ READ_W_BASIS w.bf
+ ITERATE
+ WRITE_W_BASIS out/w.bf
+ WRITE_C_RGRID out/c.rf
+ WRITE_PARAM out/data
+ WRITE_THERMO out/data
+ FINISH
