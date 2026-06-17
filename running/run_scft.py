@@ -688,7 +688,7 @@ def read_csv_col(in_path: str, col: str, data_lambda = lambda text: text, debug 
 # execute_num("out_prepared", 1, 250, True, True, "timings.csv", True)
 
 # to_csv("out_prepared", "output.csv")
-# to_csv_num("out_prepared", 1, 250, "output.csv")
+to_csv_num("scft_data/out_prepared", 1, 250, "output_new.csv", True)
 
 # prepare_files('initial_guesses', 'the_files', 'rgrid.rf', "param", "command", "run", True, lambda a: a.rstrip(".rf"))
 
@@ -698,6 +698,6 @@ def read_csv_col(in_path: str, col: str, data_lambda = lambda text: text, debug 
 # # to_csv("out_prepared", "output.csv")
 # to_csv("the_files", "the_files/output.csv", True)
 
-f_e = read_csv_col("output.csv", "free_energy", lambda text: float(text), True)
-names = read_csv_col("output.csv", "name", debug = True)
-find_neighbors_list(f_e, names, epsilon = 0.00001, tol_debug = False, debug = True)
+# f_e = read_csv_col("scft_data/output.csv", "free_energy", lambda text: float(text), True)
+# # names = read_csv_col("output.csv", "name", debug = True)
+# find_neighbors(f_e, epsilon = 0.000012, tol_debug = False, debug = True)

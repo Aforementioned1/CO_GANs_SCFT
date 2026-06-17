@@ -2,6 +2,7 @@
 
 <!-- TABLE OF CONTENTS -->
 ## Table of Contents
+- [A Note on the Purpose of This Fork](#a-note-on-the-purpose-of-this-fork)
 - [Overview](#overview)
   - [Citing this work](#citing-this-work)
   - [Relevant work](#relevant-work)
@@ -15,6 +16,9 @@
 - [Results](#results)
 - [Contributing](#contributing)
 - [Acknowledgments](#acknowledgments)
+
+## A Note on the Purpose of This Fork
+This repository is a fork from [GANs_SCFT](https://github.com/kdorfmanUMN/GANs_SCFT), originally authored by [Peng-Yu Chen](https://github.com/pengyuchen) and colleagues. The purpose of this fork is to provide utilities to help users connect the gaps left from GANs_SCFT's code, such as by provided advanced data augmentation helpers and more data compilation helpers. All files specific to this fork are currently located in the directory [`running`](./running). See [`README.md`](./running/README.md) in `running` for more detailed information on the specifics of the utilities that this fork provides. 
 
 ## Overview
 This repository is part of the submitted work [Gaming self-consistent field theory: Generative block polymer phase discovery](https://doi.org/10.1073/pnas.2308698120), which describes a method 

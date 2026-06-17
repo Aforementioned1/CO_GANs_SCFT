@@ -59,9 +59,7 @@ def augment(in_path: str, out_path: str, debug = False):
     (.rf files) to read from. Should not end in a trailing /\n
     out_path: A path to a directory to write to. Should not end in a trailing /\n
     debug: Whether to print extra information for debugging\n
-    Note: You must set a PATH_TO_PREPROCESSING environment
-    variable to be able to import DataProcessor\n
-    Note 2: This function needs to be updated to work better!"""
+    Note: This function needs to be updated to work better!"""
 
     if (debug):
         print("Debug mode ON for augment")
