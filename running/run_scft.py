@@ -701,3 +701,5 @@ def read_csv_col(in_path: str, col: str, data_lambda = lambda text: text, debug 
 f_e = read_csv_col("output.csv", "free_energy", lambda text: float(text), True)
 names = read_csv_col("output.csv", "name", debug = True)
 find_neighbors_list(f_e, names, epsilon = 0.00001, tol_debug = False, debug = True)
+
+print("hi from olivia")
