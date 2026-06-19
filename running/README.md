@@ -13,7 +13,7 @@
   - [Slurm Scheduler Scripts](#slurm-scheduler-scripts)
 
 ## A Note on the Purpose of This Fork
-This repository is a fork from [GANs_SCFT](https://github.com/kdorfmanUMN/GANs_SCFT), originally authored by [Peng-Yu Chen](https://github.com/pengyuchen) and colleagues. The purpose of this fork is to provide utilities to help users connect the gaps left from GANs_SCFT's code, such as by provided advanced data augmentation helpers and more data compilation helpers. All Python files that provide utilities from this fork are currently located in the directory [`running`](./running). Additional Shellscript helper files are located in [`scripts`](./scripts). Finally, some examples of real file usages will later be located in [`usage`](./usage). See [`README.md`](../README.md) in the main directory for more detailed information on the purpose and utilities of the original repository.
+This repository is a fork from [GANs_SCFT](https://github.com/kdorfmanUMN/GANs_SCFT), originally authored by [Peng-Yu Chen](https://github.com/pengyuchen) and colleagues. The purpose of this fork is to provide utilities to help users connect the gaps left from GANs_SCFT's code, such as by provided advanced data augmentation helpers and more data compilation helpers. All Python files that provide utilities from this fork are currently located in the directory `running`. Additional Shellscript helper files are located in [`scripts`](../scripts). Finally, some examples of real file usages will later be located in [`usage`](../usage). See [`README.md`](../README.md) in the main directory for more detailed information on the purpose and utilities of the original repository.
 
 <!-- ## Overview -->
 
@@ -31,24 +31,24 @@ NOTE: This function currently does not do any checking to make sure tensor dimen
 The file [`training.py`](./training.py) contains helper functions for preparing data from the GAN to be run through PSCF, running PSCF, and collecting/analyzing the results of PSCF.
 
 #### File Preparation
-After generating guesses with GANs_SCFT's program [`../postprocessing/generate_guess.py`](../postprocessing/generate_guess.py), files are outputted in the format `guess_x.rf`, where x represents the GAN's guess number (ex `guess_1.rf` or `guess_2.rf`). This is slightly problematic, as it is preferable to structure files each in their individual directory, as they are in both [PSCF's examples](https://github.com/dmorse/pscfpp/tree/master/examples) and GANs_SCFT's [Data Repository for U of M (DRUM) files](https://conservancy.umn.edu/items/ba70d027-ba90-4497-9260-8800022654ff). A sample file tree is depicted below:
-.
-├── 1
-│   ├── out
-│   │   ├── c.rf
-│   │   ├── data
-│   │   └── w.bf
-│   ├── c.bf
-│   ├── command
-│   ├── log
-│   ├── param
-│   ├── rgrid.rf
-│   ├── run
-│   ├── w.bf
-1: The guess number (in this example, 1)
-out: Stores data outputted from PSCF
-c.bf, w.bf, and log: Created during the process of running PSCF
-command, param, and run: Files that are required for PSCF but can be used across various PSCF calculations
+After generating guesses with GANs_SCFT's program [`../postprocessing/generate_guess.py`](../postprocessing/generate_guess.py), files are outputted in the format `guess_x.rf`, where x represents the GAN's guess number (ex `guess_1.rf` or `guess_2.rf`). This is slightly problematic, as it is preferable to structure files each in their individual directory, as they are in both [PSCF's examples](https://github.com/dmorse/pscfpp/tree/master/examples) and GANs_SCFT's [Data Repository for U of M (DRUM) files](https://conservancy.umn.edu/items/ba70d027-ba90-4497-9260-8800022654ff). A sample file tree is depicted below:\
+.\
+├── 1\
+│   ├── out\
+│   │   ├── c.rf\
+│   │   ├── data\
+│   │   └── w.bf\
+│   ├── c.bf\
+│   ├── command\
+│   ├── log\
+│   ├── param\
+│   ├── rgrid.rf\
+│   ├── run\
+│   ├── w.bf\
+1: The guess number (in this example, 1)\
+out: Stores data outputted from PSCF\
+c.bf, w.bf, and log: Created during the process of running PSCF\
+command, param, and run: Files that are required for PSCF but can be used across various PSCF calculations\
 rgrid.rf: A PSCF initial guess
 
 This stucture makes running PSCF considerably easier, as one must only run `./run` (or `source ./run` if they lack the execute permission) in order to execute a PSCF calculation. All output and intermediate files are saved locally, so it is clear which files are associated with which initial guess.
