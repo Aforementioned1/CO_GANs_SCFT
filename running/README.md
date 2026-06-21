@@ -8,9 +8,13 @@
   - [Tensor Reshaping](#tensor-reshaping)
 - [SCFT Helpers](#scft-helpers)
   - [File Preparation](#file-preparation)
+  - [Data Processing](#data-processing)
 - [Shell Script Helpers](#shell-script-helpers)
   - [Virtual Environment Initializer](#virtual-environment-initializer)
   - [Slurm Scheduler Scripts](#slurm-scheduler-scripts)
+- [Examples](#examples)
+  - [GAN Training Examples](#gan-training-examples)
+  - [SCFT Examples](#scft-examples)
 
 ## A Note on the Purpose of This Fork
 This repository is a fork from [GANs_SCFT](https://github.com/kdorfmanUMN/GANs_SCFT), originally authored by [Peng-Yu Chen](https://github.com/pengyuchen) and colleagues. The purpose of this fork is to provide utilities to help users connect the gaps left from GANs_SCFT's code, such as by provided advanced data augmentation helpers and more data compilation helpers. All Python files that provide utilities from this fork are currently located in the directory `running`. Additional Shellscript helper files are located in [`scripts`](../scripts). Finally, some examples of real file usages will later be located in [`usage`](../usage). See [`README.md`](../README.md) in the main directory for more detailed information on the purpose and utilities of the original repository.
@@ -54,6 +58,9 @@ rgrid.rf: A PSCF initial guess
 This stucture makes running PSCF considerably easier, as one must only run `./run` (or `source ./run` if they lack the execute permission) in order to execute a PSCF calculation. All output and intermediate files are saved locally, so it is clear which files are associated with which initial guess.
 This documentation is currently unfinished! Sorry!
 
+#### Data Processing
+This documentation is currently unfinished! Sorry!
+
 ## Shell Script Helpers
 The directory [`../scripts`](../scripts) contains some helpful Shell Script files. This section is currently underdeveloped, but will later include all scripts used for this project.
 
@@ -63,4 +70,23 @@ The file [`../scripts/init_venv.sh`](../scripts/init_venv.sh) contains a Shell S
 #### Slurm Scheduler Scripts
 MSI uses Slurm to schedule jobs. This fork provides some files that can run Slurm scripts. [`../scripts/batch.sh`](../scripts/batch.sh) contains the basic structure for a Slurm `sbatch` command, which can schedule a job. Note: This file currently only holds placeholder values for the partition and script name, so it will not run correctly!
 
+This rest of this documentation is currently unfinished! Sorry!
+
+## Examples
+This section describes the examples provided by this fork. With them, one can easily set up and run a GAN training or SCFT calculation session in mere seconds.
+
+#### GAN Training Examples
+There are currently no examples for this part of the process, as it is underdeveloped. Be on the lookout for more information in future commits.
+
+#### SCFT Examples
+The files [`scft_example.py`](./scft_example.py) and [`scft_example_cont.py`](./scft_example_cont.py) provide critical utilities for the SCFT section of the project. These files perform all steps necessary for the entire two-step SCFT process, by:
+-Preparing directories for the files directly outputted from the GAN for initial SCFT calculations
+-Running the first pass of SCFT with the previously prepared files
+-Writing data from each SCFT trajectory to a CSV file for easy processing (see [Data Processing](#data-processing))
+-Reading from the CSV file to find which trajectories converged after the first SCFT pass
+-Initializing directories for the second SCFT pass with all converged trajectories
+-Fixing all w.bf files from the first SCFT pass to agree with the parameter files of the second pass (and skipping any ignored directory names)
+-Running the second pass of SCFT with the previously prepared files
+-Writing data from each second-pass SCFT trajectory to a CSV file for easy processing (see [Data Processing](#data-processing))
+All functions currently use default values, but these may be modified to use an input file or command line arguments in a later version.
 This rest of this documentation is currently unfinished! Sorry!

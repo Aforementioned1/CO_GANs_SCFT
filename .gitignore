@@ -2,3 +2,5 @@
 gan_data
 scft_data
 .venv
+drum_ex
+__pycache__

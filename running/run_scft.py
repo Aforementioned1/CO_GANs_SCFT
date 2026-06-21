@@ -62,6 +62,220 @@ def prepare_files(in_path: str, out_path: str, out_name: str,
         if debug:
             print(in_path, "does not exist or is not a directory! Skipping...")
 
+def prepare_files_second(in_path: str, dir_names: list[str], out_path: str,
+                  param_path: str, command_path: str, run_path: str,
+                  sub_path = "out/w.bf", debug = False):
+    """ Prepares inputs so that they can be easily run with execute.
+        Unlike prepare_files(), this function is designed to be used to
+        initialize the second pass of PSCF, so it takes some differing
+        arguments and is structured slightly differently. As this code
+        is more recent than prepare_files, it is slightly more straightforward.\n
+        in_path: A path to a directory to copy PSCF outputs from. Should not end in /\n
+        dir_names: A list of subdirectories within in_path to copy outputs from.
+        Should not end in /\n
+        out_path: A path to a directory to prepare new PSCF calculations in.
+        Should not end in /\n
+        param_path: A path to the parameter file to use. Will be copied to out_path/name/param\n
+        command_path: A path to the command file to use. Will be copied to out_path/name/command\n
+        run_path: A path to run file to use. Will be copied to out_path/name/run\n
+        sub_path: A path within each PSCF directory to its output.
+        The constructed path to copy will look like in_path/name/sub_path,
+        where name is present in dir_names. Defaults to "out/w.bf"\n
+        debug: Whether to print extra information for debugging\n
+        NOTE: To fully prepare for second-step SCFT calculations, one must also use
+        fix_w_basis() (or fix_w_basis_dir(), which can be used on initialized
+        SCFT directories) to fix each w.bf file.
+        """
+    if len(dir_names) <= 0:
+        print("Invalid list of allowed directory names found! Skipping...")
+        return
+    if debug:
+        print("Debug mode ON for prepare_files_second")
+        print("In path:", in_path)
+        print("Allowed names:", dir_names)
+        print("Sub-path:", sub_path)
+        print("Example completed path:", (in_path + "/" + dir_names[0] + "/" + sub_path))
+        print("Out path:", out_path)
+        print("Param path:", param_path)
+        print("Command path:", command_path)
+        print("Run path:", run_path)
+
+    ### TODO: make some of this naming make more sense!!!!!
+    big_in_path = Path(in_path)
+    big_out_path = Path(out_path)
+    if big_in_path.is_dir():
+        # find all directories located in in_path that have a name in dir_names
+        for dir in dir_names:
+            # make sure each name is a directory
+            d = big_in_path / dir
+            if d.exists() and d.is_dir():
+                if debug:
+                    print("Current:", dir)
+                # make a Pathlib Path object to the current target directory
+                this_path = big_out_path / dir
+                # make all directories to out_path/name/out (out must be included for later)
+                (this_path / "out").mkdir(parents = True, exist_ok = True)
+
+                # get the text of this path to be used with shutil
+                this_path_str = str(this_path)
+                # copy the step 1 output file (in sub_path) to its target while keeping the name
+                shutil.copy(str(d / sub_path), this_path_str)
+                # copy param file
+                shutil.copy(param_path, this_path_str)
+                # copy command file
+                shutil.copy(command_path, this_path_str)
+                # copy run file
+                shutil.copy(run_path, this_path_str)
+                if debug:
+                    print("Initialized", this_path_str, "directory")
+            else:
+                if debug:
+                    print(d, "does not exist or is not a directory! Skipping...")
+    else:
+        if debug:
+            print(in_path, "does not exist or is not a directory! Skipping...")
+
+def fix_w_basis(in_path: str, out_path: str, debug = False):
+    """ Fixes w.bf (W basis) files outputted from the first pass of SCFT,
+        by:
+            -changing the crystal system from orthorhombic to triclinic\n
+            -chaning the number of cell parameters from 3 to 6\n
+            -appending the 3 cell parameters 0, 0, and 1.5707963\n
+            -limiting the amount of basis functions from 32768 to 17000\n
+        See [DOC PENDING] for more information on how to know if a
+        w.bf file should be run through this function.\n
+        in_path: A path to a properly structured w.bf file (see above)\n
+        out_path: A path to output the fixed w.bf file to
+        (this will often be the same as out_path)\n
+        debug: Whether to print extra information for debugging\n"""
+    if debug:
+        print("Debug mode ON for fix_w_basis")
+        print("In path:", in_path)
+        print("Out path:", out_path)
+    
+    with open(in_path, "r") as f:
+        # read as lines for easier processing
+        lines = f.readlines()
+
+    if debug:
+        print("Initial line 5:", lines[4])
+        print("Initial line 7:", lines[6])
+        print("Initial line 9:", lines[8])
+        print("Initial line 15:", lines[13])
+
+    # change crystal_system to be triclinic
+    lines[4] = lines[4].rstrip("orthorhombic\n") + "triclinic\n"
+
+    # fix N_cell_param
+    lines[6] = lines[6].rstrip("3\n") + "6\n"
+
+    # fix cell_param
+    lines[8] = lines[8].rstrip("\n") + "    0.000    0.000    1.5707963\n"
+
+    lines[14] = lines[14].rstrip("32768\n") + "17000\n"
+
+    if debug:
+        print("Final line 5:", lines[4])
+        print("Final line 7:", lines[6])
+        print("Final line 9:", lines[8])
+        print("Final line 15:", lines[13])
+
+    with open(out_path, "w") as f:
+        f.writelines(lines)
+
+def fix_w_basis_dir(in_path: str, ignored_names: list[str], out_path: str,
+                    in_name: str, out_name: str, write_fixed = False,
+                    fixed_path = "fixed.csv", debug = False):
+    """ Fixes several w.bf (W basis) files outputted from the first pass of SCFT,
+        by:
+            -changing the crystal system from orthorhombic to triclinic\n
+            -chaning the number of cell parameters from 3 to 6\n
+            -appending the 3 cell parameters 0, 0, and 1.5707963\n
+            -limiting the amount of basis functions from 32768 to 17000\n
+        See [DOC PENDING] for more information on how to know if a
+        w.bf file should be run through this function. Unlike fix_w_basis(),
+        this function allows for the fixing of several w.bf files within initialized
+        SCFT directories.\n
+        in_path: A path to a directory containing initialized SCFT subdirectories\n
+        ignored_names: A list of string names to skip running. This feature
+        can be used to prevent fixing the same file twice, as this will cause
+        the file to have the extra text appended twice\n
+        out_path: A path to a directory to output the fixed w.bf files to,
+        while preserving each w.bf's corresponding parent directory.
+        This should almost always be the same as in_path.\n
+        in_name: The sub-path to be used to locate w.bf files within each subdirectory.
+        Full paths will look like in_path/dir_name/in_name, where dir_name is a directory
+        within in_path that is not present in ignored_names.\n
+        out_name: The sub-path to be used to output w.bf files within each subdirectory to.
+        Full paths will look like out_path/dir_name/out_name, where dir_name is a directory
+        within in_path that is not present in ignored_names.\n
+        write_fixed: Whether to write the names of each directory that was fixed to a file.
+        This can later be read with read_csv_col and used as the ignored_names parameter.\n
+        fixed_path: The path to write the names of each directory that was fixed to.
+        Defaults to "fixed.csv". This parameter will not be used if write_fixed == False.
+        This function currently does not write the CSV header ("names") to the file,
+        so this must be done manually for now.
+        debug: Whether to print extra information for debugging\n"""
+    if debug:
+        print("Debug mode ON for fix_w_basis")
+        print("In path:", in_path)
+        print("Ignored names:", ignored_names)
+        print("Out path:", out_path)
+        print("In name:", in_name)
+        print("Out name:", out_name)
+        print("Write fixed:", write_fixed)
+        print("Write target:", fixed_path)
+
+    fixed_list = []
+    
+    dir_path = Path(in_path)
+    out = Path(out_path)
+    if dir_path.is_dir():
+        # find all directories located in in_path that have a name in dir_names
+        for dir in dir_path.iterdir():
+            # skip if ignored
+            if dir.name in ignored_names:
+                if debug:
+                    print(dir.name, "is ignored! Skipping...")
+            else:
+                # make sure each name is a directory
+                if dir.exists() and dir.is_dir():
+                    if debug:
+                        print("Current:", dir)
+                    # make a Pathlib Path object to the current target directory
+                    temp_out = out / dir.name
+                    # make all directories to out_path/dir
+                    temp_out.mkdir(parents = True, exist_ok = True)
+
+                    # if debug:
+                    #     print("In temp:", (dir / file_name))
+                    #     print("Out temp:", (temp_out / file_name))
+
+                    fix_w_basis(str(dir / in_name), str(temp_out / out_name))
+                    
+                    fixed_list.append(dir.name)
+
+                    if debug:
+                        print("Fixed", (dir / in_name), "to", (temp_out / out_name))
+                else:
+                    if debug:
+                        print(dir, "does not exist or is not a directory! Skipping...")
+    else:
+        if debug:
+            print(in_path, "does not exist or is not a directory! Skipping...")
+
+    if (write_fixed):
+        # add each name with linebreak
+        text = ""
+        for n in fixed_list:
+            text += n + "\n"
+        
+        # append to file to preserve any names already there
+        with open(fixed_path, 'a') as f:
+            f.write(text)
+
+    return fixed_list
+
 def run(entry: Path, timing = False, debug = False):
     """ Executes the run file for the provided entry.\n
         entry: A Pathlib Path object to the directory containing a run file (named "run")\n
@@ -130,6 +344,8 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, time_path = "
 
         # only write header if time_path does not exist yet
         if not time.exists():
+            if debug:
+                print("Creating timing file at", time_path)
             # create and write CSV header
             time.touch()
 
@@ -237,9 +453,24 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
     # if timing is enabled, override time_path and write CSV headers
     col = ['name', 'start', 'end', 'elapsed']
     if timing:
-        with open(time_path, "w") as f:
-            writer = csv.DictWriter(f, fieldnames=col)
-            writer.writeheader()
+        time = Path(time_path)
+
+        # make sure that the parent directories exists
+        time.parent.mkdir(parents = True, exist_ok = True)
+
+        # only write header if time_path does not exist yet
+        if not time.exists():
+            if debug:
+                print("Creating timing file at", time_path)
+            # create and write CSV header
+            time.touch()
+
+            with open(time_path, "w") as f:
+                writer = csv.DictWriter(f, fieldnames=col)
+                writer.writeheader()
+        # with open(time_path, "w") as f:
+        #     writer = csv.DictWriter(f, fieldnames=col)
+        #     writer.writeheader()
 
     dir_path = Path(in_path)
 
@@ -398,6 +629,8 @@ def to_csv(dir_path: str, output: str, debug = False):
         print("Amount converged:", num_conv)
         print("Percent convergence:", (num_conv / num_it))
 
+    # make sure that the parent directories exists
+    Path(output).parent.mkdir(parents = True, exist_ok = True)
     with open(output, "w") as f:
         writer = csv.DictWriter(f, fieldnames=col)
         # write CSV header
@@ -678,6 +911,19 @@ def read_csv_col(in_path: str, col: str, data_lambda = lambda text: text, debug 
     else:
         if debug:
             print(in_path, "does not exist or is not a file! Skipping...")
+        return False
+
+def find_true_names(bools: list[bool], names: list[str]):
+    """ Performs a list comprehension, returning a list
+    of all names with a corresponding value in bools that is true.
+    Each value in bools is matched to its corresponding index in names
+    (ex. bools[0] is matched with names[0]).\n
+    bools: A list of booleans to use\n
+    names: A list of names to relate to bools\n
+    NOTE: It is currently assumed that len(bools) == len(names),
+    which could potentially cause errors if not satisfied"""
+
+    return [name for name, val in zip(names, bools) if val]
 
 ### TODO: ADD MORE SAFETY FEATURES
 ### TODO: ADD MORE DEBUGGING
@@ -688,7 +934,7 @@ def read_csv_col(in_path: str, col: str, data_lambda = lambda text: text, debug 
 # execute_num("out_prepared", 1, 250, True, True, "timings.csv", True)
 
 # to_csv("out_prepared", "output.csv")
-to_csv_num("scft_data/out_prepared", 1, 250, "output_new.csv", True)
+# to_csv_num("scft_data/out_prepared", 1, 250, "output_new.csv", True)
 
 # prepare_files('initial_guesses', 'the_files', 'rgrid.rf', "param", "command", "run", True, lambda a: a.rstrip(".rf"))
 
