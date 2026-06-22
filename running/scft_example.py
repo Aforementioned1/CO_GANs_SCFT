@@ -1,8 +1,16 @@
+""" THIS FILE IS DEPRECATED AND WILL BE REMOVED IN A LATER COMMIT.
+    PLEASE USE scft_example_cont_param.py (will later be renamed to scft_example.py) INSTEAD"""
+
 """ This file contains an example test program to run through the
 entire SCFT process, from GAN-generated guesses to analyzing free energy values.
 While it should be possible to resume where you left off after temporarily
 stopping this program, scft_example_cont.py offers a more advanced control system
 to completely prevent any issues caused upon restarting the program. """
+
+# deprecation warning to suggest that a user uses scft_example_cont_param.py
+import warnings
+
+warnings.warn("This file has been deprecated. Please use the updated file scft_example_cont_param.py", DeprecationWarning)
 
 import run_scft
 

@@ -15,5 +15,5 @@ cd ~/CO_GANs_SCFT/running
 # load python 3.10.9 (hopefully will work, this project has been tested on 3.11.15)
 module load python3/3.10.9_anaconda2023.03_libmamba
 
-# put more code here (to run python files)
-python scft_example_cont.py
+# do scft stuff
+python scft_example_cont_param.py defaults.json

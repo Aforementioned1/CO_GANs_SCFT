@@ -1,0 +1,37 @@
+{
+    "step": 1,
+    "debug": true,
+    "gan_min": 1,
+    "gan_max": 5000,
+    "scft_1": {
+        "in_path": "first_run/gan_guesses",
+        "out_path": "first_run/scft_1",
+        "param": "first/param",
+        "command": "first/command",
+        "run": "first/run",
+        "adv_checking": true,
+        "timing": true,
+        "time_path": "first_run/data/scft_1_timings.csv",
+        "data_path": "first_run/data/scft_1.csv"
+    },
+    "rf_name": "rgrid.rf",
+    "name_col": "name",
+    "conv_col": "conv",
+    "scft_2": {
+        "in_path": "first_run/scft_1",
+        "out_path": "first_run/scft_2",
+        "param": "second/param",
+        "command": "second/command",
+        "run": "second/run",
+        "adv_checking": true,
+        "timing": true,
+        "time_path": "first_run/data/scft_2_timings.csv",
+        "data_path": "first_run/data/scft_2.csv"
+    },
+    "ignored_path": "first_run/data/ignored_names.csv",
+    "ignored_col": "name",
+    "w_in_name": "w.bf",
+    "w_out_name": "w.bf",
+    "write_fixed_w_basis": true,
+    "fixed_w_basis_path": "first_run/data/ignored_names.csv"
+}
