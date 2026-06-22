@@ -16,4 +16,4 @@ cd ~/CO_GANs_SCFT/running
 module load python3/3.10.9_anaconda2023.03_libmamba
 
 # do scft stuff
-python scft_example_cont_param.py defaults.json
+python scft_example.py defaults.json
