@@ -15,4 +15,11 @@ cd ~/CO_GANs_SCFT
 # load python 3.10.9 (hopefully will work, this project has been tested on 3.11.15)
 module load python3/3.10.9_anaconda2023.03_libmamba
 
+# make sure to load venv!!!
+source ~/CO_GANs_SCFT/.venv/bin/activate
+
 # put more code here (to run python files)
+
+
+# deactivate venv after to be safe
+deactivate

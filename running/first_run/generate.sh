@@ -15,5 +15,11 @@ cd ~/CO_GANs_SCFT/postprocessing
 # load python 3.10.9 (hopefully will work, this project has been tested on 3.11.15)
 module load python3/3.10.9_anaconda2023.03_libmamba
 
+# make sure to load venv!!!
+source ~/CO_GANs_SCFT/.venv/bin/activate
+
 # generate guesses (could maybe be done outside of a job)
 python generate_guess.py --weight_path ../running/first_run/model/Gweights_45.pt --out_dir ../running/first_run/gan_guesses --num_images 5000
+
+# deactivate venv after to be safe
+deactivate

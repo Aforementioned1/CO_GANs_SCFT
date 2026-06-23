@@ -15,4 +15,10 @@ cd ~/CO_GANs_SCFT/train
 # load python 3.10.9 (hopefully will work, this project has been tested on 3.11.15)
 module load python3/3.10.9_anaconda2023.03_libmamba
 
+# make sure to load venv!!!
+source ~/CO_GANs_SCFT/.venv/bin/activate
+
 python GAN_train.py --dataroot ../running/first_run/data.pt --out_dir_images ../running/first_run/model/images --out_dir_model ../running/first_run/model
+
+# deactivate venv after to be safe
+deactivate
