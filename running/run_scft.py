@@ -142,7 +142,7 @@ def fix_w_basis(in_path: str, out_path: str, debug = False):
             -chaning the number of cell parameters from 3 to 6\n
             -appending the 3 cell parameters 0, 0, and 1.5707963\n
             -limiting the amount of basis functions from 32768 to 17000\n
-        See [DOC PENDING] for more information on how to know if a
+        See README.md: Second SCFT Step for more information on how to know if a
         w.bf file should be run through this function.\n
         in_path: A path to a properly structured w.bf file (see above)\n
         out_path: A path to output the fixed w.bf file to
@@ -192,7 +192,7 @@ def fix_w_basis_dir(in_path: str, ignored_names: list[str], out_path: str,
             -chaning the number of cell parameters from 3 to 6\n
             -appending the 3 cell parameters 0, 0, and 1.5707963\n
             -limiting the amount of basis functions from 32768 to 17000\n
-        See [DOC PENDING] for more information on how to know if a
+        See README.md: Second SCFT Step for more information on how to know if a
         w.bf file should be run through this function. Unlike fix_w_basis(),
         this function allows for the fixing of several w.bf files within initialized
         SCFT directories.\n
@@ -357,7 +357,7 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, time_path = "
 
     if dir_path.is_dir():
         # run on every directory in in_path
-        for entry in dir_path.iterdir():
+        for entry in sorted(dir_path.iterdir()):
             if entry.is_dir():
                 time_data = {}
                 if debug:
