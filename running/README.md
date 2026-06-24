@@ -39,8 +39,7 @@ The file [`training.py`](./training.py) contains helper functions for preparing 
 
 #### File Preparation
 After generating guesses with GANs_SCFT's program [`../postprocessing/generate_guess.py`](../postprocessing/generate_guess.py), files are outputted in the format `guess_x.rf`, where x represents the GAN's guess number (ex `guess_1.rf` or `guess_2.rf`). This is slightly problematic, as it is preferable to structure files each in their individual directory, as they are in both [PSCF's examples](https://github.com/dmorse/pscfpp/tree/master/examples) and GANs_SCFT's [Data Repository for U of M (DRUM) files](https://hdl.handle.net/11299/257550). A sample file tree is depicted below:\
-<code>
-.\
+<code>.\
 ├── 1\
 │   ├── out\
 │   │   ├── c.rf\
@@ -77,6 +76,7 @@ In the paper [Gaming self-consistent field theory: Generative block polymer phas
 - N_cell_param must be changed from "3" to "6" (line 7)
 - The numbers "0.000    0.000    1.5707963" must be appended to cell_param (line 9)
 - The number of basis functions must be changed from "32786" to "17000" (line 15)
+
 To reinitialize outputs from the first SCFT step to be run again, the function [`prepare_files_second()`](./run_scft.py#L65) is included in this fork. It initializes new directories for all included subdirectories in a specified directory. The subdirectories to include must be specified, as only solutions that converged during step 1 should be reinitialized. One can easily obtain a list to be used with this function with the function [`find_true_names()`](./run_scft.py#L916) (see the previous section for more information).\
 Once these directories have been initialized, the functions [`fix_w_basis()`](./run_scft.py#L138) and [`fix_w_basis_dir()`](./run_scft.py#L186) can be used to automatically apply the aforementioned changes to `w.bf` files. `fix_w_basis()` applies the fix to a single file, and `fix_w_basis_dir()` applies the fix to every (unignored, see note below) subdirectory with a `w.bf` file present.\
 NOTE: If `fix_w_basis()` is run on the same file twice, it will currently append the new additions twice! `fix_w_basis_dir()` allows for a list of "ignored names" that have already been fixed to be skipped.\
@@ -91,7 +91,7 @@ The file [`../scripts/init_venv.sh`](../scripts/init_venv.sh) contains a Shell S
 #### Slurm Scheduler Scripts
 MSI uses Slurm to schedule jobs. This fork provides some files that can run Slurm scripts. [`../scripts/batch.sh`](../scripts/batch.sh) contains the basic structure for a Slurm `sbatch` command, which can schedule a job. Note: This file currently only holds placeholder values for the partition and script name, so it will not run correctly!
 
-This rest of this documentation is currently unfinished! Sorry!
+The rest of this documentation is currently unfinished! Sorry!
 
 ## Examples
 This section describes the examples provided by this fork. With them, one can easily set up and run a GAN training or SCFT calculation session in mere seconds.
@@ -100,14 +100,18 @@ This section describes the examples provided by this fork. With them, one can ea
 There are currently no examples for this part of the process, as it is underdeveloped. Be on the lookout for more information in future commits.
 
 #### SCFT Examples
-The files [`scft_example.py`](./scft_example.py) and [`scft_example_cont.py`](./scft_example_cont.py) provide critical utilities for the SCFT section of the project. These files perform all steps necessary for the entire two-step SCFT process, by:
--Preparing directories for the files directly outputted from the GAN for initial SCFT calculations
--Running the first pass of SCFT with the previously prepared files
--Writing data from each SCFT trajectory to a CSV file for easy processing (see [Data Processing](#data-processing))
--Reading from the CSV file to find which trajectories converged after the first SCFT pass
--Initializing directories for the second SCFT pass with all converged trajectories
--Fixing all w.bf files from the first SCFT pass to agree with the parameter files of the second pass (and skipping any ignored directory names)
--Running the second pass of SCFT with the previously prepared files
--Writing data from each second-pass SCFT trajectory to a CSV file for easy processing (see [Data Processing](#data-processing))
-All functions currently use default values, but these may be modified to use an input file or command line arguments in a later version.
-This rest of this documentation is currently unfinished! Sorry!
+**This section is currently somewhat outdated**
+The file [`scft_example.py`](./scft_example.py) provides critical utilities for the SCFT section of the project. This file performs all steps necessary for the entire two-step SCFT process, by:
+- Preparing directories for the files directly outputted from the GAN for initial SCFT calculations (see [File Preparation](#file-preparation))
+- Running the first pass of SCFT with the previously prepared files (see [Running PSCF](#running-pscf))
+- Writing data from each SCFT trajectory to a CSV file for easy processing (see [Data Collection](#data-collection))
+- Reading from the CSV file to find which trajectories converged after the first SCFT pass (see [Data Processing](#data-processing))
+- Initializing directories for the second SCFT pass with all converged trajectories (see [Second SCFT Step](#second-scft-step))
+- Fixing all w.bf files from the first SCFT pass to agree with the parameter files of the second pass (and skipping any ignored directory names) (see [Second SCFT Step](#second-scft-step))
+- Running the second pass of SCFT with the previously prepared files (see [Running PSCF](#running-pscf))
+- Writing data from each second-pass SCFT trajectory to a CSV file for easy processing (see [Data Collection](#data-collection))
+
+`scft_example.py` accepts a JSON parameter file as a command line argument. A [sample parameter file](./defaults.json) with default values is provided with this repository. To use it with `scft_example.py`, run the following command:\
+`python scft_example.py defaults.json`\
+If not file is passed into the program as a command line argument, it will immediately exit. If a parameter file is not properly structured or lacks some necessary keys, the program will likely throw an error (see [JSON's website](https://www.json.org/json-en.html) for some information on how JSON files are structured). Detailed information on all necessary parameters will be provided in a later version of this documentation. Please refer to [`defaults.json`](./defaults.json) to see what parameters must be provided for now.
+The rest of this documentation is currently unfinished! Sorry!
