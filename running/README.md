@@ -100,7 +100,6 @@ This section describes the examples provided by this fork. With them, one can ea
 There are currently no examples for this part of the process, as it is underdeveloped. Be on the lookout for more information in future commits.
 
 #### SCFT Examples
-**This section is currently somewhat outdated**
 The file [`scft_example.py`](./scft_example.py) provides critical utilities for the SCFT section of the project. This file performs all steps necessary for the entire two-step SCFT process, by:
 - Preparing directories for the files directly outputted from the GAN for initial SCFT calculations (see [File Preparation](#file-preparation))
 - Running the first pass of SCFT with the previously prepared files (see [Running PSCF](#running-pscf))
