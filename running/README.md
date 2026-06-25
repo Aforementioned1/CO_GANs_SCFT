@@ -18,6 +18,7 @@
 - [Examples](#examples)
   - [GAN Training Examples](#gan-training-examples)
   - [SCFT Examples](#scft-examples)
+  - [JSON Parameters](#json-parameters)
 
 ## A Note on the Purpose of This Fork
 This repository is a fork from [GANs_SCFT](https://github.com/kdorfmanUMN/GANs_SCFT), originally authored by [Peng-Yu Chen](https://github.com/pengyuchen) and colleagues. The purpose of this fork is to provide utilities to help users connect the gaps left from GANs_SCFT's code, such as by provided advanced data augmentation helpers and more data compilation helpers. All Python files that provide utilities from this fork are currently located in the directory `running`. Additional Shellscript helper files are located in [`scripts`](../scripts). Finally, some examples of real file usages will later be located in [`usage`](../usage). See [`README.md`](../README.md) in the main directory for more detailed information on the purpose and utilities of the original repository.
@@ -78,8 +79,9 @@ In the paper [Gaming self-consistent field theory: Generative block polymer phas
 - The number of basis functions must be changed from "32786" to "17000" (line 15)
 
 To reinitialize outputs from the first SCFT step to be run again, the function [`prepare_files_second()`](./run_scft.py#L65) is included in this fork. It initializes new directories for all included subdirectories in a specified directory. The subdirectories to include must be specified, as only solutions that converged during step 1 should be reinitialized. One can easily obtain a list to be used with this function with the function [`find_true_names()`](./run_scft.py#L916) (see the previous section for more information).\
-Once these directories have been initialized, the functions [`fix_w_basis()`](./run_scft.py#L138) and [`fix_w_basis_dir()`](./run_scft.py#L186) can be used to automatically apply the aforementioned changes to `w.bf` files. `fix_w_basis()` applies the fix to a single file, and `fix_w_basis_dir()` applies the fix to every (unignored, see note below) subdirectory with a `w.bf` file present.\
+Once these directories have been initialized, the functions [`fix_w_basis()`](./run_scft.py#L138) and [`fix_w_basis_dir()`](./run_scft.py#L186) can be used to automatically apply the aforementioned changes to `w.bf` files. `fix_w_basis()` applies the fix to a single file, and `fix_w_basis_dir()` applies the fix to every (unignored, see note below) subdirectory with a `w.bf` file present. `fix_w_basis_dir()` also optionally appends the name of every directory it fixes to a CSV file, for reuse as a list of ignored names later.\
 NOTE: If `fix_w_basis()` is run on the same file twice, it will currently append the new additions twice! `fix_w_basis_dir()` allows for a list of "ignored names" that have already been fixed to be skipped.\
+NOTE: `fix_w_basis_dir()` currently does not write a CSV header to the specified file to write ignored names to, so users must prepend a header (such as "names\n") to read it with `read_csv_col()` (see [Data Processing](#data-processing)) or other CSV interpreters. This will be changed in a later version!
 Once these helper functions have been run to prepare the second step of SCFT, the same execution functions may be used to run PSCF (see [Running PSCF](#running-pscf)).
 
 ## Shell Script Helpers
@@ -113,4 +115,26 @@ The file [`scft_example.py`](./scft_example.py) provides critical utilities for 
 `scft_example.py` accepts a JSON parameter file as a command line argument. A [sample parameter file](./defaults.json) with default values is provided with this repository. To use it with `scft_example.py`, run the following command:\
 `python scft_example.py defaults.json`\
 If not file is passed into the program as a command line argument, it will immediately exit. If a parameter file is not properly structured or lacks some necessary keys, the program will likely throw an error (see [JSON's website](https://www.json.org/json-en.html) for some information on how JSON files are structured). Detailed information on all necessary parameters will be provided in a later version of this documentation. Please refer to [`defaults.json`](./defaults.json) to see what parameters must be provided for now.
+
+#### JSON Parameters
+The file explained in the previous section, `scft_example.py`, requires the input of a JSON parameter file to specify how the code should operate without needing to actually modify it. A list of each parameter and what it does is given below. While some parameters may seem redundant, this program is intended to give users as much customizability as possible without touching this program's code. Despite this, custom modifications to the code could help repurpose parameters into real use.
+- step: The step the current program is on. In `scft_example.py`, this is a value from 0-9, inclusive, where 0 signifies a program that has not started and 9 signifies a program that has completely finished. The JSON parameter file that is inputted will automatically be rewritten with each step to update it. This allows the program to resume execution at the same place that it was halted.
+- debug: Whether or not to print each `run_scft.py` method's debug information.
+- gan_min: The lowest GAN guess number to use. This will almost always be 0 or 1.
+- gan_max: The highest GAN guess number to use. This depends on how high the program should search and how many GAN guesses were generated.
+- scft_1: A JSON object with the same parameters as scft_2. Read more below.
+- rf_name: The name to rename each GAN initial guess (`.rf`) file to. This should usually be `rgrid.rf`.
+- name_col: The CSV column where subdirectory names are stored at. This will always be "name" unless you have modified the code of `run_scft.py`.
+- conv_col: The CSV column where subdirectory names are stored at. This will always be "converged" unless you have modified the code of `run_scft.py`.
+- scft_2: A JSON object with the same parameters as scft_1. Read more below.
+- ignored_path: A path to a CSV file to read ignored directory names from. See [Second SCFT Step](#second-scft-step) for more information.
+- ignored_col: The CSV column to read ignored names from in ignored_path (usually "name")
+- w_in_name: The name of `w.bf` files to search for in unignored subdirectories in order to fix them for SCFT step 2 (usually "w.bf")
+- w_out_name: The name of `w.bf` files to write fixed files to (usually "w.bf", though this will overwrite unfixed files if they are also named "w.bf").
+- write_fixed_w_basis: Whether to write the names of the parent directories of every `w.bf` fixed in the program to a CSV file for later use as ignored_path.
+- fixed_w_basis_path: Where to append names of the parent directories of every `w.bf` fixed in the program to, with each name separated by a new line (\n) character. See [Second SCFT Step](#second-scft-step) for more information.
+
+The following parameters constitute an "SCFT block":
+- The rest of this documentation is currently unfinished! Sorry!
+
 The rest of this documentation is currently unfinished! Sorry!

@@ -1,14 +1,9 @@
 """ This file contains an example test program to run through the
 entire SCFT process, from GAN-generated guesses to analyzing free energy values.
-Unlike example.py, this program is able to resume where is stopped execution through
-a file that holds an integer that is the current step."""
-
-### LIST OF PARAMETERS
-# step
-# debug
-# gan_path
-# scft_1_path
-# scft_1
+This program requires a JSON parameter file to be passed in as a command line argument.
+A sample parameter file is provided in defaults.json.\n
+See README.md: SCFT Examples for information about the specifics of this program and
+see JSON Parameters for information about what parameters are required by this program"""
 
 # While some parameters may seem redundant, this program is intended to
 # give users as much customizability as possible without touching this program's code.
