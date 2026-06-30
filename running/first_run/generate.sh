@@ -7,7 +7,7 @@
 #SBATCH --tmp = 10g                  # Amount of temporary storage, currently set to 10GB
 #SBATCH --mail-type=ALL              # When to send update emails,
 #                                        currently set to ALL (includes BEGIN, END, and FAIL)
-#SBATCH --mail-users=blank@umn.edu   # Who to send emails to, currently set to a fake email address
+#SBATCH --mail-user=blank@umn.edu   # Who to send emails to, currently set to a fake email address
 
 # change to cloned Github directory in home to begin running things
 cd ~/CO_GANs_SCFT/postprocessing

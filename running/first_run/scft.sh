@@ -1,13 +1,13 @@
 #!/bin/bash -l
-# these batch settings are just for example purposes,
-#   and will be further configured once actually running jobs
-#SBATCH --time=8:00:00               # Time for job, currently set to 8h
-#SBATCH --ntasks=8                   # Number of processor cores to run on, currently set to 8
-#SBATCH --mem=10g                    # Amount of memory, currently set to 10GB
-#SBATCH --tmp = 10g                  # Amount of temporary storage, currently set to 10GB
-#SBATCH --mail-type=ALL              # When to send update emails,
-#                                        currently set to ALL (includes BEGIN, END, and FAIL)
-#SBATCH --mail-users=blank@umn.edu   # Who to send emails to, currently set to a fake email address
+#SBATCH --job-name=CO_GAN_training_SCFT
+#SBATCH --output=~/CO_GANs_SCFT/running/first_run/log/scft_%j.out
+#SBATCH --error=~/CO_GANs_SCFT/running/first_run/log/scft_%j.err
+#SBATCH --time=1:00:00
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=8g
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=blank@umn.edu
 
 # change to cloned Github directory in home to begin running things
 cd ~/CO_GANs_SCFT/running
@@ -19,7 +19,7 @@ module load python3/3.10.9_anaconda2023.03_libmamba
 source ~/CO_GANs_SCFT/.venv/bin/activate
 
 # do scft stuff
-python scft_example.py defaults.json
+python scft_example.py param.json
 
 # deactivate venv after to be safe
 deactivate
