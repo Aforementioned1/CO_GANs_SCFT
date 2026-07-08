@@ -563,6 +563,120 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
         if debug:
             print(in_path, "does not exist or is not a directory! Skipping...")
 
+def execute(in_path: str, adv_checking = True, timing = False, clean_timing = False, time_path = "timings.csv", debug = False):
+    """ Executes the run script for a single valid directory at in_path. Unlike run(), this
+        program provides the same additional functionalities as execute_dir() and execute_num()
+        while still only running one file.\n
+        in_path: A path to a directory with a proper script file named "run"\n
+        adv_checking: Whether advanced checking should be used in the case that in_path already
+        contains a "log" final to find partially-completed calculations. This is recommended,
+        but may be slightly slower.\n
+        timing: Whether timing information should be printed and saved to time_path\n
+        clean_timing: Whether to exclude certain timing values to attempt to "clean" it, if timing is True\n
+        time_path: Where to write timing data to, if timing is True\n
+        debug: Whether to print extra information for debugging"""
+    if debug:
+        print("Debug mode ON for execute_num")
+        print("In path:", in_path)
+        print("Advanced checking:", adv_checking)
+        print("Timing:", timing)
+        print("Clean timing:", clean_timing)
+        print("Time path:", time_path)
+
+    # if timing is enabled, override time_path and write CSV headers
+    col = ['name', 'start', 'end', 'elapsed']
+    if timing:
+        time = Path(time_path)
+
+        # make sure that the parent directories exists
+        time.parent.mkdir(parents = True, exist_ok = True)
+
+        # only write header if time_path does not exist yet
+        if not time.exists():
+            if debug:
+                print("Creating timing file at", time_path)
+            # create and write CSV header
+            time.touch()
+
+            with open(time_path, "w") as f:
+                writer = csv.DictWriter(f, fieldnames=col)
+                writer.writeheader()
+    # run on in_path
+    entry = Path(in_path)
+    if entry.is_dir():
+        time_data = {}
+        add_time = timing
+        if debug:
+            print("Current entry:", entry.name)
+            
+        # if log does not exist, it's safe to assume that this has not been run
+        if not (entry / "log").exists():
+            time_data = run(entry, timing, debug)
+        # if log exists, go to convergence/iteration checking if enabled
+        else:
+            if adv_checking:
+                # should only check if not converged and not at max iterations
+                # if enabled, use the same process used in collect to find iterations and convergence
+                if debug:
+                    print("Going to advanced checking!")
+                # get text from log file for parsing
+                log = Path(in_path) / entry.name / "log"
+                text = log.read_text()
+
+                num = -1
+
+                # get iteration number
+                ind = text.rfind("Iteration  ")
+                if ind != -1:
+                    ind += 11
+                    # read up to four digits
+                    # will never be 5, as current iteration limit is set to 2500
+                    # strip whitespace, then cast as int
+                    num = int(text[ind:ind+4].strip())
+                    if debug:
+                        print("Highest iteration:",num)
+                
+                # look for whether it converged
+                converged = False
+                ind = text.rfind("Converged")
+                if ind != -1:
+                    converged = True
+                
+                should_check = (num != max_iterations - 1) and (not converged)
+                
+                if debug:
+                    print("Converged:", converged)
+                    print("Should check:", should_check)
+                
+                if should_check:
+                    time_data = run(entry, timing, debug)
+                else:
+                    # ignore if clean_timing is True
+                    add_time = timing and not clean_timing
+                    time_data = {"name":    entry.name,
+                                    "start":   0,
+                                    "end":     0,
+                                    "elapsed": 0}
+            else:
+                if debug:
+                    print("Advanced checking is disabled. Skipping...")
+                # ignore if clean_timing is True
+                add_time = timing and not clean_timing
+                time_data = {"name":    entry.name,
+                                "start":   0,
+                                "end":     0,
+                                "elapsed": 0}
+        
+        # use this to allow for bad data exclusion
+        if add_time:
+            with open(time_path, "a") as f:
+                writer = csv.DictWriter(f, fieldnames=col)
+                # write CSV data
+                writer.writerow(time_data)
+    else:
+        if debug:
+            print(entry, "does not exist or is not a directory! Skipping...")
+
 def to_csv(dir_path: str, output: str, debug = False):
     """ Reads name, log, iteration, convergence, and free_energy
     information for all existing directories within dir_path in alphanumeric order
