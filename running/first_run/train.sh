@@ -1,9 +1,8 @@
 #!/bin/bash -l
-# NOTE: --output and --error need absolute paths
 #SBATCH --job-name=CO_GAN_training_SCFT
-#SBATCH --output=~/CO_GANs_SCFT/running/first_run/log/gan_%j.out
-#SBATCH --error=~/CO_GANs_SCFT/running/first_run/log/gan_%j.err
-#SBATCH --time=00:30:00
+#SBATCH --output=/users/0/mumma026/CO_GANs_SCFT/running/first_run/log/gan_%j.out
+#SBATCH --error=/users/0/mumma026/CO_GANs_SCFT/running/first_run/log/gan_%j.err
+#SBATCH --time=01:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=6g

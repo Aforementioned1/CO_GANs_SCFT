@@ -1,0 +1,36 @@
+#!/bin/bash -l
+#SBATCH --job-name=CO_SCFT_array
+#SBATCH --output=/users/0/mumma026/CO_GANs_SCFT/running/first_run/log/scft/scft_%A/%a.out
+#SBATCH --error=/users/0/mumma026/CO_GANs_SCFT/running/first_run/log/scft/scft_%A/%a.err
+#SBATCH --array=18-20,27
+#SBATCH --time=00:30:00
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=280m
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=mumma026@umn.edu
+
+# Run multiple SCFT step 2 processes with Slurm arrays
+
+echo "--- Running task number: $SLURM_ARRAY_TASK_ID ---"
+
+# change to cloned Github directory in home to begin running things
+cd ~/CO_GANs_SCFT/running
+
+# load python 3.10.9 (hopefully will work, this project has been tested on 3.11.15)
+module load python3/3.10.9_anaconda2023.03_libmamba
+
+# load dependencies of PSCF
+module load fftw/3.3.6-double-gnu-7.2.0
+module load cuda
+
+# make sure to load venv!!!
+source ~/CO_GANs_SCFT/.venv/bin/activate
+
+# do scft stuff
+python scft_example.py ./first_run/params/param_${SLURM_ARRAY_TASK_ID}.json
+
+# deactivate venv after to be safe
+deactivate
+
+echo "--- Task number: $SLURM_ARRAY_TASK_ID finished! ---"

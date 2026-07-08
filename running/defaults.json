@@ -1,5 +1,6 @@
 {
     "step": 0,
+    "stop_step": -1,
     "debug": true,
     "gan_min": 1,
     "gan_max": 5000,
@@ -16,7 +17,7 @@
     },
     "rf_name": "rgrid.rf",
     "name_col": "name",
-    "conv_col": "conv",
+    "conv_col": "converged",
     "scft_2": {
         "in_path": "scft_1",
         "out_path": "scft_2",

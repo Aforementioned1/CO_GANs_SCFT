@@ -102,6 +102,7 @@ This section describes the examples provided by this fork. With them, one can ea
 There are currently no examples for this part of the process, as it is underdeveloped. Be on the lookout for more information in future commits.
 
 #### SCFT Examples
+**NOTE: This section may be removed in future commmits**
 The file [`scft_example.py`](./scft_example.py) provides critical utilities for the SCFT section of the project. This file performs all steps necessary for the entire two-step SCFT process, by:
 - Preparing directories for the files directly outputted from the GAN for initial SCFT calculations (see [File Preparation](#file-preparation))
 - Running the first pass of SCFT with the previously prepared files (see [Running PSCF](#running-pscf))
@@ -117,8 +118,10 @@ The file [`scft_example.py`](./scft_example.py) provides critical utilities for 
 If not file is passed into the program as a command line argument, it will immediately exit. If a parameter file is not properly structured or lacks some necessary keys, the program will likely throw an error (see [JSON's website](https://www.json.org/json-en.html) for some information on how JSON files are structured). Detailed information on all necessary parameters will be provided in a later version of this documentation. Please refer to [`defaults.json`](./defaults.json) to see what parameters must be provided for now.
 
 #### JSON Parameters
+**NOTE: This section may be removed in future commmits**
 The file explained in the previous section, `scft_example.py`, requires the input of a JSON parameter file to specify how the code should operate without needing to actually modify it. A list of each parameter and what it does is given below. While some parameters may seem redundant, this program is intended to give users as much customizability as possible without touching this program's code. Despite this, custom modifications to the code could help repurpose parameters into real use.
 - step: The step the current program is on. In `scft_example.py`, this is a value from 0-9, inclusive, where 0 signifies a program that has not started and 9 signifies a program that has completely finished. The JSON parameter file that is inputted will automatically be rewritten with each step to update it. This allows the program to resume execution at the same place that it was halted.
+- stop_step: A step to stop at. The program will be halted if step every reaches stop_step. Therefore, a stop_step value of -1 will allow for the program to completely execute.
 - debug: Whether or not to print each `run_scft.py` method's debug information.
 - gan_min: The lowest GAN guess number to use. This will almost always be 0 or 1.
 - gan_max: The highest GAN guess number to use. This depends on how high the program should search and how many GAN guesses were generated.

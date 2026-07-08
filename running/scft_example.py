@@ -54,7 +54,7 @@ def inc_step(param: dict, step_key: str, update_save: bool, path: str):
             json.dump(param, f, indent = 4)
 
 # step 0
-if param['step'] == 0:
+if param['step'] == 0 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # prepare files
     run_scft.prepare_files(in_path = param_scft_1["in_path"], out_path = param_scft_1["out_path"],
@@ -64,17 +64,17 @@ if param['step'] == 0:
     inc_step(param, "step", True, sys.argv[1])
 
 # step 1
-if param['step'] == 1:
+if param['step'] == 1 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # run SCFT for directories 1-250 in scft_1
-    run_scft.execute_num(in_path = param_scft_1["in_path"], start = min, end = max,
+    run_scft.execute_num(in_path = param_scft_1["out_path"], start = min, end = max,
                          adv_checking = param_scft_1["adv_checking"],
-                        timing = param_scft_1["timing"], time_path = param_scft_1["time_path"],
+                        timing = param_scft_1["timing"], clean_timing = True, time_path = param_scft_1["time_path"],
                         debug = debug)
     inc_step(param, "step", True, sys.argv[1])
 
 # step 2
-if param['step'] == 2:
+if param['step'] == 2 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # combine data to CSV file
     run_scft.to_csv_num(dir_path = param_scft_1["out_path"], num_start = min, num_end = max,
@@ -82,7 +82,7 @@ if param['step'] == 2:
     inc_step(param, "step", True, sys.argv[1])
 
 # step 3
-if param['step'] == 3:
+if param['step'] == 3 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # read names of each initial guess (should be 1-250) and whether they converged
     names = run_scft.read_csv_col(in_path = param_scft_1["data_path"], 
@@ -100,25 +100,25 @@ if param['step'] == 3:
     inc_step(param, "step", True, sys.argv[1])
 
 # step 4
-if param['step'] == 4:
+if param['step'] == 4 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # get all guesses that converged with step 1
     conv_names = run_scft.find_true_names(bools = conv, names = names)
     inc_step(param, "step", True, sys.argv[1])
 
 # step 5
-if param['step'] == 5:
+if param['step'] == 5 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # prepare for second SCFT pass
     # scft_2's in should be the same as scft_1's out, but decided to make separate param
-    run_scft.prepare_files_second(in_path = param_scft_2["in_path"], names = conv_names,
+    run_scft.prepare_files_second(in_path = param_scft_2["in_path"], dir_names = conv_names,
                                   out_path = param_scft_2["out_path"],
                 param_path = param_scft_2["param"], command_path = param_scft_2["command"],
                 run_path = param_scft_2["run"], debug = debug)
     inc_step(param, "step", True, sys.argv[1])
 
 # step 6
-if param['step'] == 6:
+if param['step'] == 6 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # get ignored names for fixing w.bf files
     ignored_names = run_scft.read_csv_col(in_path = param["ignored_path"], col = param["ignored_col"], debug = debug)
@@ -142,17 +142,17 @@ if param['step'] == 6:
     inc_step(param, "step", True, sys.argv[1])
 
 # step 7
-if param['step'] == 7:
+if param['step'] == 7 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # execute PSCF - can still be done in numerical order as nonexistent
     # directories will just get skipped (though this will lead to a lot of printing)
     run_scft.execute_num(in_path = param_scft_2["out_path"], start = min, end = max,
-                         adv_checking = param_scft_2["adv_checking"], timing = param_scft_2["timing"],
+                         adv_checking = param_scft_2["adv_checking"], timing = param_scft_2["timing"], clean_timing = True,
                          time_path = param_scft_2["time_path"], debug = debug)
     inc_step(param, "step", True, sys.argv[1])
 
 # step 8
-if param['step'] == 8:
+if param['step'] == 8 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # combine data to CSV file
     run_scft.to_csv_num(dir_path = param_scft_2["out_path"], num_start = min, num_end = max,

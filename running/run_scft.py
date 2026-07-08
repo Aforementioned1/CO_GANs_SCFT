@@ -320,7 +320,7 @@ def run(entry: Path, timing = False, debug = False):
     
     return time_dict
 
-def execute_dir(in_path: str, adv_checking = True, timing = False, time_path = "timings.csv", debug = False):
+def execute_dir(in_path: str, adv_checking = True, timing = False, clean_timing = False, time_path = "timings.csv", debug = False):
     """ Executes the run script for every valid directory in in_path.\n
         in_path: A path to a directory with properly initialized subdirectories,
         as per the format specified in prepare_files\n
@@ -328,6 +328,7 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, time_path = "
         containing a "log" final to find partially-completed calculations. This is recommended,
         but may be slightly slower (especially if many completed calculations are present in in_path)\n
         timing: Whether timing information should be printed and saved to time_path\n
+        clean_timing: Whether to exclude certain timing values to attempt to "clean" it, if timing is True\n
         time_path: Where to write timing data to, if timing is True\n
         debug: Whether to print extra information for debugging"""
     if debug:
@@ -335,6 +336,7 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, time_path = "
         print("In path:", in_path)
         print("Advanced checking:", adv_checking)
         print("Timing:", timing)
+        print("Clean timing:", clean_timing)
         print("Time path:", time_path)
 
     # if timing is enabled, override time_path and write CSV headers
@@ -360,6 +362,7 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, time_path = "
         for entry in sorted(dir_path.iterdir()):
             if entry.is_dir():
                 time_data = {}
+                add_time = timing
                 if debug:
                     print("Current entry:", entry.name)
                     
@@ -405,6 +408,7 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, time_path = "
                         if should_check:
                             time_data = run(entry, timing, debug)
                         else:
+                            add_time = timing and not clean_timing
                             time_data = {"name":    entry.name,
                                          "start":   0,
                                          "end":     0,
@@ -412,12 +416,14 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, time_path = "
                     else:
                         if debug:
                             print("Advanced checking is disabled. Skipping...")
+                        add_time = timing and not clean_timing
                         time_data = {"name":    entry.name,
                                      "start":   0,
                                      "end":     0,
                                      "elapsed": 0}
                 
-                if timing:
+                # use this to allow for bad data exclusion
+                if add_time:
                     with open(time_path, "a") as f:
                         writer = csv.DictWriter(f, fieldnames=col)
                         # write CSV data
@@ -429,7 +435,7 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, time_path = "
         if debug:
             print(in_path, "does not exist or is not a directory! Skipping...")
 
-def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing = False, time_path = "timings.csv", debug = False):
+def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing = False, clean_timing = False, time_path = "timings.csv", debug = False):
     """ Executes the run script for every valid directory in in_path that falls between start and end, inclusive.\n
         in_path: A path to a directory with properly initialized subdirectories with numerical names,
         as per the format specified in prepare_files\n
@@ -439,6 +445,7 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
         containing a "log" final to find partially-completed calculations. This is recommended,
         but may be slightly slower (especially if many completed calculations are present in in_path)\n
         timing: Whether timing information should be printed and saved to time_path\n
+        clean_timing: Whether to exclude certain timing values to attempt to "clean" it, if timing is True\n
         time_path: Where to write timing data to, if timing is True\n
         debug: Whether to print extra information for debugging"""
     if debug:
@@ -448,6 +455,7 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
         print("End:", end)
         print("Advanced checking:", adv_checking)
         print("Timing:", timing)
+        print("Clean timing:", clean_timing)
         print("Time path:", time_path)
 
     # if timing is enabled, override time_path and write CSV headers
@@ -480,6 +488,7 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
             entry = dir_path / str(i)
             if entry.is_dir():
                 time_data = {}
+                add_time = timing
                 if debug:
                     print("Current entry:", entry.name)
                     
@@ -525,6 +534,8 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
                         if should_check:
                             time_data = run(entry, timing, debug)
                         else:
+                            # ignore if clean_timing is True
+                            add_time = timing and not clean_timing
                             time_data = {"name":    entry.name,
                                          "start":   0,
                                          "end":     0,
@@ -532,12 +543,15 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
                     else:
                         if debug:
                             print("Advanced checking is disabled. Skipping...")
+                        # ignore if clean_timing is True
+                        add_time = timing and not clean_timing
                         time_data = {"name":    entry.name,
                                      "start":   0,
                                      "end":     0,
                                      "elapsed": 0}
                 
-                if timing:
+                # use this to allow for bad data exclusion
+                if add_time:
                     with open(time_path, "a") as f:
                         writer = csv.DictWriter(f, fieldnames=col)
                         # write CSV data
@@ -925,9 +939,100 @@ def find_true_names(bools: list[bool], names: list[str]):
 
     return [name for name, val in zip(names, bools) if val]
 
-### TODO: ADD MORE SAFETY FEATURES
-### TODO: ADD MORE DEBUGGING
-### TODO: ADD EXECUTE AND COLLECT AND CREATE FHELM INTERPRETTER
+def review_csv_timings(in_path: str, sec_div = 3600, debug = False):
+    """Prints some statistics about a valid CSV file containing timing data.\n
+    in_path: The file to review. Must be in CSV format and must contain the columns
+    "name", "start", "end", and "elapsed"\n
+    sec_div: This number is used to divide data into sections.
+    For example, the default value of 3600 will split items into
+    sections for 0 hours, 1 hour, 2 hours, etc. based on how much
+    elapsed time each data point has.\n
+    debug: Whether to print extra information for debugging\n"""
+
+    if debug:
+        print("--- CSV Timing Data ---")
+
+    file = Path(in_path)
+
+    if file.exists() and file.is_file():
+        if debug:
+            print("Attempting to load data!")
+        # initialize reader
+        with open(in_path, "r") as f:
+            reader = csv.DictReader(f = f)
+            if debug:
+                print("Loaded data!")
+
+            # make these unrealistic values so they are overwritten
+            start = datetime.datetime(year = 9999, month = 1, day = 1)
+            start_name = "default"
+            end = datetime.datetime(year = 1, month = 1, day = 1)
+            end_name = "default"
+            short = datetime.timedelta(days = 9999999)
+            short_name = "default"
+            long = datetime.timedelta(days = -9999999)
+            long_name = "default"
+            sum = datetime.timedelta(hours = 0)
+            amt = 0
+            dur_sec_more = {}
+            dur_sec_less = {}
+
+            for r in reader:
+                # check start
+                temp = datetime.datetime.fromisoformat(r['start'])
+                if temp < start:
+                    start = temp
+                    start_name = r['name']
+
+                # check end
+                temp = datetime.datetime.fromisoformat(r['end'])
+                if temp > end:
+                    end = temp
+                    end_name = r['name']
+
+                # check time
+                elapsed = datetime.datetime.strptime(r['elapsed'], "%H:%M:%S.%f")
+                temp = elapsed - datetime.datetime.strptime("00:00:00", "%H:%M:%S")
+                if temp < short:
+                    short = temp
+                    short_name = r['name']
+
+                if temp > long:
+                    long = temp
+                    long_name = r['name']
+
+                hours = int(temp.total_seconds() // sec_div)
+
+                if hours not in dur_sec_more.keys():
+                    dur_sec_more[hours] = [(r['name'], temp)]
+                    dur_sec_less[hours] = 1
+                else:
+                    dur_sec_more[hours].append((r['name'], temp))
+                    dur_sec_less[hours] += 1
+
+                sum += temp
+                amt += 1
+
+            print("Parsed data!\n")
+            print("Info for analysis:")
+            print(f"Earliest start: {start} (Name: {start_name})")
+            print(f"Latest end: {end} (Name: {end_name})")
+            print(f"Total elapsed run time: {(end - start)}\n")
+            print(f"Shortest calculation time: {short} (Name: {short_name})")
+            print(f"Longest calculation time: {long} (Name: {long_name})")
+            print(f"Total calculations: {amt}")
+            print(f"Total computing time: {sum}")
+            print(f"Average computing time: {sum / amt}")
+            print(f"Duration sections: {dur_sec_less}")
+
+            return dur_sec_more
+
+    else:
+        if debug:
+            print(in_path, "does not exist or is not a file! Ignoring...")
+        return False
+
+review_csv_timings("./first_run/data/scft_2_timings.csv", sec_div = 3600, debug = True)
 
 
 # prepare_files("initial_guesses", "initial_guesses_prep", "rgrid", "param", "command", "run", True)
