@@ -7,6 +7,8 @@ see JSON Parameters for information about what parameters are required by this p
 
 ######### CURRENTLY, THIS MUST BE RUN FROM .. (~/running) TO RESOLVE run_scft's IMPORT
 
+############# ALSO ADDED SEC_DIV!!!
+
 # While some parameters may seem redundant, this program is intended to
 # give users as much customizability as possible without touching this program's code.
 # Despite this, custom modifications to the code could help repurpose parameters into real use.
@@ -16,6 +18,7 @@ import run_scft
 import sys
 import json
 import argparse
+import csv
 
 parser = argparse.ArgumentParser()
 
@@ -41,6 +44,7 @@ args = parser.parse_args()
 num = args.num
 step = args.step
 param_path = args.param
+debug = args.verbose
 
 # if step is chosen
 if (num == -2):
@@ -88,8 +92,6 @@ if param_path != None:
         min = param["gan_min"]
         max = param["gan_max"]
 
-        debug = param["debug"]
-
 else:
     # end program if nothing is inputted
     print("No parameter file detected.")
@@ -97,23 +99,7 @@ else:
     
     sys.exit()
 
-# DEPRECATE THIS
-def inc_step(param: dict, step_key: str, update_save: bool, path: str):
-    """ Increments the integer parameter at step_key by one,
-    then saves the new parameters to path if update_save == True\n
-    param: A dict of parameter values, with an integer value at key step_key\n
-    step_key: A string key that has an integer value in param\n
-    update_save: Whether to save the updated parameters after incrementation\n
-    path: The path to save the updated parameters to, if enabled """
-    # increment step_key
-    param[step_key] += 1
-
-    # if enabled, save updated param to path
-    if update_save:
-        with open(path, "w") as f:
-            json.dump(param, f, indent = 4)
-
-# step 0
+# 0 (PREP_SCFT_1)
 if num == 0:
     # print("--- Step", param['step'], "---")
     # prepare files
@@ -121,28 +107,65 @@ if num == 0:
                            out_name = param["rf_name"],
                 param_path = param_scft_1["param"], command_path = param_scft_1["command"], run_path = param_scft_1["run"],
                 debug = debug)
-    inc_step(param, "step", True, sys.argv[1])
 
-# step 1
+### DEPRECATED
+# # step 1
+# if num == 1:
+#     # print("--- Step", param['step'], "---")
+#     # run SCFT for directories 1-250 in scft_1
+#     run_scft.execute_num(in_path = param_scft_1["out_path"], start = min, end = max,
+#                          adv_checking = param_scft_1["adv_checking"],
+#                         timing = param_scft_1["timing"], clean_timing = True, time_path = param_scft_1["time_path"],
+#                         debug = debug)
+
+# 1 (SCFT_1_TO_CSV)
 if num == 1:
-    # print("--- Step", param['step'], "---")
-    # run SCFT for directories 1-250 in scft_1
-    run_scft.execute_num(in_path = param_scft_1["out_path"], start = min, end = max,
-                         adv_checking = param_scft_1["adv_checking"],
-                        timing = param_scft_1["timing"], clean_timing = True, time_path = param_scft_1["time_path"],
-                        debug = debug)
-    inc_step(param, "step", True, sys.argv[1])
-
-# step 2
-if param['step'] == 2 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # combine data to CSV file
     run_scft.to_csv_num(dir_path = param_scft_1["out_path"], num_start = min, num_end = max,
                         output = param_scft_1["data_path"], debug = debug)
-    inc_step(param, "step", True, sys.argv[1])
+    
+# 2 (SCFT_1_CONV)
+# this code is from conv_helper.py
+if num == 2:
+    iter = 0
+    conv = 0
+    i = 0
+    neither = 0
 
-# step 3
-if param['step'] == 3 and param['step'] != param['stop_step']:
+    # should utilize run_scft's calc_state()
+    with open(param_scft_1['data_path'], "r") as f:
+        reader = csv.DictReader(f)
+        for r in reader:
+            #print(r['iterations'])
+            if r['converged'] == "True":
+                if debug:
+                    print("CONV", r)
+                i += 1
+                conv += 1
+            elif r['iterations'] == "2499":
+                if debug:
+                    print("ITER", r)
+                i += 1
+                iter += 1
+
+            else:
+                # assumed to not have converged and not have maxed iterations
+                neither += 1
+                if debug:
+                    print("NEIT", r)
+
+    print("Number CONV(erged):", conv)
+    print("Number (fully) ITER(ated):", iter)
+    print("Number CONV(erged)/(fully) ITER(ated):", i)
+    print("Number NEIT(her)", neither)
+
+# 3 (SCFT_1_TIME)
+if num == 3:
+    run_scft.review_csv_timings(param_scft_1["time_path"], sec_div = param_scft_1["sec_div"], debug = debug)
+
+# 4 (PREP_SCFT_2)
+if num == 4:
     print("--- Step", param['step'], "---")
     # read names of each initial guess (should be 1-250) and whether they converged
     names = run_scft.read_csv_col(in_path = param_scft_1["data_path"], 
@@ -157,17 +180,11 @@ if param['step'] == 3 and param['step'] != param['stop_step']:
     # included as parameters, which should also never change
     conv = run_scft.read_csv_col(in_path = param_scft_1["data_path"], col = param["conv_col"],
                 data_lambda = lambda text: True if text == "True" else False, debug = debug)
-    inc_step(param, "step", True, sys.argv[1])
 
-# step 4 - ELIMINATE
-if param['step'] == 4 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # get all guesses that converged with step 1
     conv_names = run_scft.find_true_names(bools = conv, names = names)
-    inc_step(param, "step", True, sys.argv[1])
 
-# step 5 - ELIMINATE
-if param['step'] == 5 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # prepare for second SCFT pass
     # scft_2's in should be the same as scft_1's out, but decided to make separate param
@@ -175,10 +192,9 @@ if param['step'] == 5 and param['step'] != param['stop_step']:
                                   out_path = param_scft_2["out_path"],
                 param_path = param_scft_2["param"], command_path = param_scft_2["command"],
                 run_path = param_scft_2["run"], debug = debug)
-    inc_step(param, "step", True, sys.argv[1])
 
-# step 6
-if param['step'] == 6 and param['step'] != param['stop_step']:
+# 5 (FIX_W_BASIS)
+if num == 5:
     print("--- Step", param['step'], "---")
     # get ignored names for fixing w.bf files
     ignored_names = run_scft.read_csv_col(in_path = param["ignored_path"], col = param["ignored_col"], debug = debug)
@@ -199,24 +215,67 @@ if param['step'] == 6 and param['step'] != param['stop_step']:
                              out_path = param_scft_2["out_path"], in_name = param["w_in_name"],
                              out_name = param["w_out_name"], write_fixed = param["write_fixed_w_basis"],
                              fixed_path = param["fixed_w_basis_path"], debug = debug)
-    inc_step(param, "step", True, sys.argv[1])
 
-# step 7
-if param['step'] == 7 and param['step'] != param['stop_step']:
-    print("--- Step", param['step'], "---")
-    # execute PSCF - can still be done in numerical order as nonexistent
-    # directories will just get skipped (though this will lead to a lot of printing)
-    run_scft.execute_num(in_path = param_scft_2["out_path"], start = min, end = max,
-                         adv_checking = param_scft_2["adv_checking"], timing = param_scft_2["timing"], clean_timing = True,
-                         time_path = param_scft_2["time_path"], debug = debug)
-    inc_step(param, "step", True, sys.argv[1])
+### DEPRECATED
+# # step 7
+# if param['step'] == 7 and param['step'] != param['stop_step']:
+#     print("--- Step", param['step'], "---")
+#     # execute PSCF - can still be done in numerical order as nonexistent
+#     # directories will just get skipped (though this will lead to a lot of printing)
+#     run_scft.execute_num(in_path = param_scft_2["out_path"], start = min, end = max,
+#                          adv_checking = param_scft_2["adv_checking"], timing = param_scft_2["timing"], clean_timing = True,
+#                          time_path = param_scft_2["time_path"], debug = debug)
 
-# step 8
-if param['step'] == 8 and param['step'] != param['stop_step']:
+# 6 (SCFT_2_TO_CSV)
+if num == 6:
     print("--- Step", param['step'], "---")
     # combine data to CSV file
     run_scft.to_csv_num(dir_path = param_scft_2["out_path"], num_start = min, num_end = max,
                         output = param_scft_2["data_path"], debug = debug)
-    inc_step(param, "step", True, sys.argv[1])
+    
+# 7 (SCFT_2_CONV)
+# this code is from conv_helper.py
+if num == 7:
+    iter = 0
+    conv = 0
+    i = 0
+    neither = 0
+
+    # should utilize run_scft's calc_state()
+    with open(param_scft_2['data_path'], "r") as f:
+        reader = csv.DictReader(f)
+        for r in reader:
+            #print(r['iterations'])
+            if r['converged'] == "True":
+                if debug:
+                    print("CONV", r)
+                i += 1
+                conv += 1
+            elif r['iterations'] == "2499":
+                if debug:
+                    print("ITER", r)
+                i += 1
+                iter += 1
+
+            else:
+                # assumed to not have converged and not have maxed iterations
+                neither += 1
+                if debug:
+                    print("NEIT", r)
+
+    print("Number CONV(erged):", conv)
+    print("Number (fully) ITER(ated):", iter)
+    print("Number CONV(erged)/(fully) ITER(ated):", i)
+    print("Number NEIT(her)", neither)
+
+# 8 (SCFT_2_TIME)
+if num == 8:
+    run_scft.review_csv_timings(param_scft_2["time_path"], sec_div = param_scft_2["sec_div"], debug = debug)
+
+# 9 (UNIQUE_SOLN)
+if num == 9:
+    data = run_scft.read_csv_col(param_scft_2["data_path"], "free_energy", lambda text: float(text), True)
+    clusters = run_scft.find_neighbors(data = data, excluded_vals = [-1], tol_debug = False, debug = debug)
+    print(clusters)
 
 print("Finished!")
