@@ -5,6 +5,8 @@ A sample parameter file is provided in defaults.json.\n
 See README.md: SCFT Examples for information about the specifics of this program and
 see JSON Parameters for information about what parameters are required by this program"""
 
+######### CURRENTLY, THIS MUST BE RUN FROM .. (~/running) TO RESOLVE run_scft's IMPORT
+
 # While some parameters may seem redundant, this program is intended to
 # give users as much customizability as possible without touching this program's code.
 # Despite this, custom modifications to the code could help repurpose parameters into real use.
@@ -13,11 +15,68 @@ import run_scft
 # from pathlib import Path
 import sys
 import json
+import argparse
 
-if len(sys.argv) > 1:
+parser = argparse.ArgumentParser()
+
+step_choices = ["HELP", "PREP_SCFT_1", "SCFT_1_TO_CSV", "SCFT_1_CONV", "SCFT_1_TIME",
+                "PREP_SCFT_2", "FIX_W_BASIS", "SCFT_2_TO_CSV", "SCFT_2_CONV",
+                "PRINT_SCFT_2_TIME", "UNIQUE_SOLN"]
+num_choices = [i for i in range(-1, len(step_choices) - 1)] 
+
+group = parser.add_mutually_exclusive_group(required = True)
+
+group.add_argument("-n", "--num", type = int, choices = num_choices, help =
+                   """The step to execute, in numerical format. This can be used to make running the program easier,
+                   but requires knowledge of which number correlates to which step. More information can be found
+                   by using \"--num -1\" or \"--step HELP\".""", default = -2)
+group.add_argument("-s", "--step", type = lambda text: text.upper(), choices = step_choices,
+                help = "The step to execute. Use \"--num -1\" or \"--step HELP\" for more information about each step.", default = "NULL")
+parser.add_argument("-p", "--param", help = "The parameter file to use")
+parser.add_argument("-v", "--verbose", action = "store_true",
+                help = "Enable verbose output from run_scft's functions (for debugging purposes)")
+# parser.add_argument("-c", "--copy", action = "store_true", help = "Automatically copy output to clipboard.")
+
+args = parser.parse_args()
+num = args.num
+step = args.step
+param_path = args.param
+
+# if step is chosen
+if (num == -2):
+    num = num_choices[step_choices.index(step)]
+# otherwise, the proper num is already present (but still update string for printing help)
+else:
+    step = step_choices[num_choices.index(num)]
+
+print("Step number:", num)
+print("Step name:", step)
+
+
+# -1 (HELP)
+# print help information before crashing the program from having a bad param file
+if num == -1:
+    # print("Sorry! No documentation here yet...............")
+    print("---------------------------------------------------------------------------------------------------------------------------------")
+    print("Step Name    |  Number  |  Description")
+    print("---------------------------------------------------------------------------------------------------------------------------------")
+    print("HELP            -1         Print this informative display")
+    print("PREP_SCFT_1     0          Prepare directories for GAN initial guesses so that they can be run through SCFT")
+    print("SCFT_1_TO_CSV   1          Collect data from SCFT step 1 calculations and write it to a CSV file")
+    print("SCFT_1_CONV     2          Print information regarding how many SCFT step 1 calculations converged")
+    print("SCFT_1_TIME     3          Print information regarding how long SCFT step 1 calculations took")
+    print("PREP_SCFT_2     4          Prepare directories for converged SCFT step 1 calculations so that they can be run through SCFT step 2")
+    print("FIX_W_BASIS     5          Fix w.bf files outputted from SCFT step 1 in preparation for SCFT step 2")
+    print("SCFT_2_TO_CSV   6          Collect data from SCFT step 2 calculations and write it to a CSV file")
+    print("SCFT_2_CONV     7          Print information regarding how many SCFT step 2 calculations converged")
+    print("SCFT_2_TIME     8          Print information regarding how long SCFT step 1 calculations took")
+    print("UNIQUE_SOLN     9          Print information regarding how many converged solutions from SCFT step 2 can be considered unique")
+    print("---------------------------------------------------------------------------------------------------------------------------------")
+
+if param_path != None:
     print("Parameter file detected.")
-    print("Attempting to read input file at", sys.argv[1], "for custom parameters.")
-    with open(sys.argv[1], "r") as f:
+    print(f"Attempting to read input file at {param_path} for custom parameters.")
+    with open(param_path, "r") as f:
         param = json.load(f)
 
         # add the scft_1 and scft_2 JSON objects to their
@@ -38,6 +97,7 @@ else:
     
     sys.exit()
 
+# DEPRECATE THIS
 def inc_step(param: dict, step_key: str, update_save: bool, path: str):
     """ Increments the integer parameter at step_key by one,
     then saves the new parameters to path if update_save == True\n
@@ -54,8 +114,8 @@ def inc_step(param: dict, step_key: str, update_save: bool, path: str):
             json.dump(param, f, indent = 4)
 
 # step 0
-if param['step'] == 0 and param['step'] != param['stop_step']:
-    print("--- Step", param['step'], "---")
+if num == 0:
+    # print("--- Step", param['step'], "---")
     # prepare files
     run_scft.prepare_files(in_path = param_scft_1["in_path"], out_path = param_scft_1["out_path"],
                            out_name = param["rf_name"],
@@ -64,8 +124,8 @@ if param['step'] == 0 and param['step'] != param['stop_step']:
     inc_step(param, "step", True, sys.argv[1])
 
 # step 1
-if param['step'] == 1 and param['step'] != param['stop_step']:
-    print("--- Step", param['step'], "---")
+if num == 1:
+    # print("--- Step", param['step'], "---")
     # run SCFT for directories 1-250 in scft_1
     run_scft.execute_num(in_path = param_scft_1["out_path"], start = min, end = max,
                          adv_checking = param_scft_1["adv_checking"],
@@ -99,14 +159,14 @@ if param['step'] == 3 and param['step'] != param['stop_step']:
                 data_lambda = lambda text: True if text == "True" else False, debug = debug)
     inc_step(param, "step", True, sys.argv[1])
 
-# step 4
+# step 4 - ELIMINATE
 if param['step'] == 4 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # get all guesses that converged with step 1
     conv_names = run_scft.find_true_names(bools = conv, names = names)
     inc_step(param, "step", True, sys.argv[1])
 
-# step 5
+# step 5 - ELIMINATE
 if param['step'] == 5 and param['step'] != param['stop_step']:
     print("--- Step", param['step'], "---")
     # prepare for second SCFT pass

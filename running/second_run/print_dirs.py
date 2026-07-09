@@ -5,16 +5,26 @@
         1. A path to a directory to read from.
         2. Whether to automatically copy the output to the clipboard for easy pasting."""
 
+# """ Include these lines to change to the program's directory """
+# import os
+# from pathlib import Path
+
+# os.chdir(Path(__file__).parent.absolute())
+# os.chdir("..")
+import run_scft
+
+# os.chdir(Path(__file__).parent.absolute())
+
 ####### CURRENTLY MUST BE RUN FROM .. (~/running)
 
 from pathlib import Path
 import pyperclip
 import argparse
-import run_scft
+
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-d", "--dir", help = "The directory to read from.")
+parser.add_argument("-d", "--dir", help = "The directory to read from.", required = True)
 parser.add_argument("-c", "--copy", action = "store_true", help = "Automatically copy output to clipboard.")
 parser.add_argument("-n", "--num", action = "store_true", help = "Assert that all directory names are numerical.")
 parser.add_argument("-r", "--review", action = "store_true", help = "Review directories for previously converged SCFT log files")

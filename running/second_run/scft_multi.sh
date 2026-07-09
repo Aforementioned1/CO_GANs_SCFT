@@ -3,7 +3,7 @@
 #SBATCH --output=/users/0/mumma026/CO_GANs_SCFT/running/first_run/log/scft/scft_%A/%a.out
 #SBATCH --error=/users/0/mumma026/CO_GANs_SCFT/running/first_run/log/scft/scft_%A/%a.err
 #SBATCH --array=18-20,27
-#SBATCH --time=00:30:00
+#SBATCH --time=00:10:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=280m
@@ -28,7 +28,7 @@ module load cuda
 source ~/CO_GANs_SCFT/.venv/bin/activate
 
 # do scft stuff
-python scft_example.py ./first_run/params/param_${SLURM_ARRAY_TASK_ID}.json
+python second_run/run_one.py second_run/scft_1/$SLURM_ARRAY_TASK_ID second_run/data/scft_1_timings.csv
 
 # deactivate venv after to be safe
 deactivate
