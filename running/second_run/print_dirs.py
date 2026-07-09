@@ -5,21 +5,28 @@
         1. A path to a directory to read from.
         2. Whether to automatically copy the output to the clipboard for easy pasting."""
 
+####### CURRENTLY MUST BE RUN FROM .. (~/running)
+
 from pathlib import Path
 import pyperclip
 import argparse
+import run_scft
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-d", "--dir", help = "The directory to read from.")
 parser.add_argument("-c", "--copy", action = "store_true", help = "Automatically copy output to clipboard.")
 parser.add_argument("-n", "--num", action = "store_true", help = "Assert that all directory names are numerical.")
+parser.add_argument("-r", "--review", action = "store_true", help = "Review directories for previously converged SCFT log files")
+parser.add_argument("-v", "--verbose", action = "store_true", help = "Print more detailed outputs (this can help with debugging)")
 
 args = parser.parse_args()
 
 target_dir = Path(args.dir)
 clip = args.copy
 num = args.num
+rev = args.review
+debug = args.verbose
 
 # check for true command line argument and ignore capitalization
 # clip = sys.argv[2].lower() == "true"
@@ -31,8 +38,28 @@ out_str = ""
 
 for d in sorted(target_dir.iterdir(), key = lambda d: int(d.stem) if num else d):
     if d.is_dir():
-        out_str += d.name + ","
-        dir_amt += 1
+        if rev:
+            log = d / "log"
+
+            state = run_scft.get_state_cat(d.absolute(), debug = True)
+            if debug:
+                print(f"{d.name}'s state is: {state}")
+            
+            # only add if calc is not done/has not finished
+            # also exclude ERR values as those likely hint at larger issues and should NOT be run
+            if state == "WARN":
+                out_str += d.name + ","
+                dir_amt += 1
+
+            # if not log.exists() or not log.is_file():
+            #     out_str += d.name + ","
+            #     dir_amt += 1
+            # else:
+            #     run_scft.get_state_cat(d.absolute, debug = True) == "WARN"
+        else:
+            out_str += d.name + ","
+            dir_amt += 1
+
 
     else:
         print(f"{d.name} is not a directory!")

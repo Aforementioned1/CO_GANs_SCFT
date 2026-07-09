@@ -10,6 +10,130 @@ from pathlib import Path
 
 max_iterations = 2500
 
+    
+def calc_state(in_path: str, log_name = "log", debug = False):
+    """Returns (and prints if debug is enabled) some information about the state
+    of a given SCFT calculation based on its log file. A list of possible outputs
+    from this program is provided below. While this function is not yet
+    widely used within this repository, there are many instances of similar code that
+    could later be replaced.\n
+    in_path: A directory with a log file to review."\n
+    log_name: The name of the SCFT log file to review. Should almost always be "log".\n
+    debug: Whether to print extra information for debugging\n
+    Output codes are divided into three categories: Success (SUC), Warning (WARN) and Error (ERR).\n
+    SUC is used for any SCFT calculations that successfully finished, regardless of convergence.\n
+    WARN is used for any SCFT calculations that are partially finished or have not started.\n
+    ERR is used for more serious problems (currently only if the directory at in_path does not exist).\n
+    Each category's constituents begin with the category, followed by an underscore and any
+    additional information. This allows for easier sorting of outputs, while still giving users
+    the power to view more details about the state of the calculation. get_state_cat() provides
+    a simple utility that runs this function and only returns the category of the output.\n
+    List of all potential outputs:\n
+    SUC_CONV: The SCFT calculation successfully converged\n
+    SUC_MAX_ITER: The SCFT calculation reached the max amount of iterations without converging.
+    This output takes precedence over SUC_NO_CONV, though any SUC_MAX_ITER should also meet the
+    requirements for SUC_NO_CONV\n
+    SUC_NO_CONV: The SCFT calculation did not converge. This is for a rare edge case in which
+    an SCFT initial guess creates a tolerance value of "NaN", crashing SCFT.\n
+    WARN_NO_LOG: The SCFT calculation has not log file and has therefore presumably not
+    started running.\n
+    WARN_NO_ITER: The SCFT log file has no recorded iterations\n
+    WARN_NOT_FIN: The SCFT calculation has not finished running.
+    WARN_NO_ITER takes precedence over this.\n
+    ERR_NO_DIR: There is no directory at the path in_path"""
+
+    in_dir = Path(in_path)
+
+    if in_dir.exists() and in_dir.is_dir():
+        # should only check if not converged and not at max iterations
+        # if enabled, use the same process used in collect to find iterations and convergence
+        # get text from log file for parsing
+        log = in_dir / log_name
+
+        if log.exists() and log.is_file():
+            text = log.read_text()
+
+            num = -1
+
+            # get iteration number
+            ind = text.rfind("Iteration  ")
+            if ind != -1:
+                ind += 11
+                # read up to four digits
+                # will never be 5, as current iteration limit is set to 2500
+                # strip whitespace, then cast as int
+                num = int(text[ind:ind+4].strip())
+                if debug:
+                    print("Highest iteration:",num)
+            else:
+                if debug:
+                    print("No iterations found.")
+                return "WARN_NO_ITER"
+            
+            # look for whether it converged
+            converged = False
+            ind = text.rfind("Converged")
+            if ind != -1:
+                converged = True
+            
+            if debug:
+                print("Converged:", converged)
+
+            # explicitly look for this to catch NaN issues
+            unconv = False
+            ind = text.rfind("Iterator failed to converge.")
+            if ind != -1:
+                unconv = True
+            
+            if debug:
+                print("Not converged:", unconv)
+
+            if converged:
+                return "SUC_CONV"
+            # do this later in case it converged on iteration #2500
+            if num == max_iterations - 1:
+                return "SUC_MAX_ITER"
+            if unconv:
+                return "SUC_NO_CONV"
+            else:
+                return "WARN_NOT_FIN"
+        else:
+            if debug:
+                print(log_name, "log file does not exist or is not a file! Skipping...")
+            return "WARN_NO_LOG"
+
+    else:
+        if debug:
+            print(in_path, "does not exist or is not a directory! Skipping...")
+        return "ERR_NO_DIR"
+
+def get_state_cat(in_path: str, log_name = "log", debug = False):
+    """Returns (and prints if debug is enabled) some categorical information about the
+    state of a given SCFT calculation based on its log file. While this function is not yet
+    widely used within this repository, there are many instances of similar code that
+    could later be replaced. This function calls calc_state() with the provided parameters
+    but only outputs the category ("SUC", "WARN" or "ERR") for easier string comparison.
+    Some more detailed information about the categories is given below.\n
+    in_path: A directory with a log file to review."\n
+    log_name: The name of the SCFT log file to review. Should almost always be "log".\n
+    debug: Whether to print extra information for debugging\n
+    SUC is used for any SCFT calculations that successfully finished, regardless of convergence.\n
+    WARN is used for any SCFT calculations that are partially finished or have not started.\n
+    ERR is used for more serious problems (currently only if the directory at in_path does not exist).\n
+    NULL is a special category exclusive to get_state_cat() that represents a problem that occured with
+    calc_state() where no category could be found at the start of the string.\n
+    For more detailed outputs, use calc_state()."""
+
+    state = calc_state(in_path = in_path, log_name = log_name, debug = debug)
+
+    if state.find("SUC") == 0:
+        return "SUC"
+    elif state.find("WARN") == 0:
+        return "WARN"
+    elif state.find("ERR") == 0:
+        return "ERR"
+    return "NULL"
+
 def prepare_files(in_path: str, out_path: str, out_name: str,
                   param_path: str, command_path: str, run_path: str, debug = False,
                   in_name_lambda = lambda a: a.lstrip("guess_").rstrip(".rf")):
@@ -1146,7 +1270,7 @@ def review_csv_timings(in_path: str, sec_div = 3600, debug = False):
             print(in_path, "does not exist or is not a file! Ignoring...")
         return False
 
-review_csv_timings("./first_run/data/scft_2_timings.csv", sec_div = 3600, debug = True)
+# review_csv_timings("./first_run/data/scft_2_timings.csv", sec_div = 3600, debug = True)
 
 
 # prepare_files("initial_guesses", "initial_guesses_prep", "rgrid", "param", "command", "run", True)
