@@ -25,7 +25,11 @@ source ~/CO_GANs_SCFT/.venv/bin/activate
 
 #### NEED TO ADD MAKING model and model/out!!!!!!!!!!!!!
 
-python GAN_train.py --dataroot ../running/first_run/data.pt --out_dir_images ../running/first_run/model/images --out_dir_model ../running/first_run/model
+python GAN_train.py --dataroot ../running/first_run/data.pt \
+    --out_dir_images ../running/first_run/model/images \
+    --out_dir_model ../running/first_run/model \
+    --batch_size 256
+    --lr 0.0002
 
 # deactivate venv after to be safe
 deactivate
