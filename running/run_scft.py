@@ -6,10 +6,38 @@ import os
 import subprocess
 import datetime
 import csv
+import json
 from pathlib import Path
+from enum import Enum
+
+f_DG = 2.74517041186 # free energy of the double gyroid phase
 
 max_iterations = 2500
 
+# little enum for compare_groups(). Could be added to other functions maybe
+OutputType = Enum("OutputType", "STDOUT_ONLY STDOUT_AND_FILE FILE_ONLY")
+
+def print_output(output: str, output_type: OutputType, out_file: str):
+    """Prints output to a location decided by the user using the OutputType enum.
+    This function should always return True\n
+    output: The text to output\n
+    write_output: Where to put this output. Options are "STDOUT_ONLY",
+    "STDOUT_AND_FILE", and "FILE_ONLY". Both file options will append text\n
+    out_file: The path to write the text output of this function to, if output_type is
+    STDOUT_ONLY or STDOUT_AND_FILE\n
+    NOTE: This function automatically appends a new line character "\\n" to file outputs."""
+    match output_type:
+        case OutputType.STDOUT_ONLY:
+            print(output)
+        case OutputType.STDOUT_AND_FILE:
+            print(output)
+            with open(out_file, "a") as f:
+                f.write(output + "\n")
+        case OutputType.FILE_ONLY:
+            with open(out_file, "a") as f:
+                f.write(output + "\n")
+
+    return True
     
 def calc_state(in_path: str, log_name = "log", debug = False):
     """Returns (and prints if debug is enabled) some information about the state
@@ -999,7 +1027,8 @@ def is_close(item_1: float, item_2: float, epsilon: float, debug = False):
         print("Result:", val)
     return val
 
-def find_neighbors(data: list[float], epsilon = 0.00001, excluded_vals = [], tol_debug = False, debug = False):
+def find_neighbors(data: list[float], epsilon = 0.00001, excluded_vals = [],
+                   tol_debug = False, const = f_DG, debug = False):
     """ Finds all "clusters" within a list that fall near each other.
     Returns a dict with "candidate" values as keys and how many
     data points fall into each candidate as values\n
@@ -1009,6 +1038,9 @@ def find_neighbors(data: list[float], epsilon = 0.00001, excluded_vals = [], tol
     This can be used to help filter out bad/empty data values (such as free energies of -1.0)\n
     tol_debug: Whether to print extra information regarding tolerance calculations for debugging.
     Note that this will print several lines for every entry in data\n
+    const: A constant that is subtracted from every value. This can be used
+    to compare the relative free energies of structures. Defaults to f_DG,
+    the free energy of the double gyroid phase.\n
     debug: Whether to print extra information for debugging. Defaults to False\n
     NOTE: Results may vary based on how the data is sorted.
     This function reads in the order of the provided list."""
@@ -1022,6 +1054,7 @@ def find_neighbors(data: list[float], epsilon = 0.00001, excluded_vals = [], tol
     cands = []
     nums = {}
     for i in data:
+        i -= const
         found_cand = False
         if tol_debug:
                 print("Searching for exclusions...")
@@ -1061,7 +1094,8 @@ def find_neighbors(data: list[float], epsilon = 0.00001, excluded_vals = [], tol
 
     return nums
 
-def find_neighbors_list(data: list[float], names: list[str], epsilon = 0.00001, excluded_vals = [], tol_debug = False, debug = False):
+def find_neighbors_list(data: list[float], names: list[str], epsilon = 0.00001,
+                        excluded_vals = [], tol_debug = False, const = f_DG, debug = False):
     """ Finds all "clusters" within a list that fall near each other.
     Returns a dict with "candidate" values as keys and a list of the
     names of each datapoint that falls within the candidate.\n
@@ -1072,6 +1106,9 @@ def find_neighbors_list(data: list[float], names: list[str], epsilon = 0.00001, 
     This can be used to help filter out bad/empty data values (such as free energies of -1.0)\n
     tol_debug: Whether to print extra information regarding tolerance calculations for debugging.
     Note that this will print several lines for every entry in data\n
+    const: A constant that is subtracted from every value. This can be used
+    to compare the relative free energies of structures. Defaults to f_DG,
+    the free energy of the double gyroid phase.\n
     debug: Whether to print extra information for debugging. Defaults to False\n
     NOTE: Results may vary based on how the data is sorted.
     This function reads in the order of the provided list."""
@@ -1085,6 +1122,7 @@ def find_neighbors_list(data: list[float], names: list[str], epsilon = 0.00001, 
     cands = []
     nums = {}
     for i in data:
+        i -= const
         found_cand = False
         if tol_debug:
                 print("Searching for exclusions...")
@@ -1127,6 +1165,17 @@ def find_neighbors_list(data: list[float], names: list[str], epsilon = 0.00001, 
         print("Name data:", nums)
 
     return nums
+
+# def make_histogram(data: list[float], out_path: str, figsize = (6, 4), dpi = 500, bins = 500):
+#     """ Reads from a CSV file, and returns a list of all values in col\n
+#         in_path: A path to a CSV file with a column named "free_energy"\n
+#         col: A CSV column present in in_path to read\n
+#         data_lambda: A lambda to be applied to each data value that is read.
+#         This can be used to convert the values read (which are strings by default)
+#         to int, float, or other data types. By default, returns itself (does nothing)\n
+#         debug: Whether to print extra information for debugging\n
+#         NOTE: This method will return a list of strings by default,
+#         but you may use the data_lambda parameter to modify the data (including data type)."""
 
 def read_csv_col(in_path: str, col: str, data_lambda = lambda text: text, debug = False):
     """ Reads from a CSV file, and returns a list of all values in col\n
@@ -1269,6 +1318,79 @@ def review_csv_timings(in_path: str, sec_div = 3600, debug = False):
         if debug:
             print(in_path, "does not exist or is not a file! Ignoring...")
         return False
+    
+# def compare_group(group_1: list[list[float | list[str]]], group_2: list[list[float | list[str]]],
+#                   output_type = OutputType.STDOUT_ONLY, out_path = "out.txt"):
+#     for num, vals in group_1:
+#         for val in vals:
+#             found = False
+#             for num2, vals2 in group_2:
+#                 if val in vals2:
+#                     found = True
+                    
+#                     if sorted(vals) != sorted(vals2):
+#                         print(f"diff detected! num: {num}, vals: {vals}, val: {val}, num2: {num2}, vals2: {vals2}")
+#             if not found:
+#                 print("something goes here if its not found maybe")
+
+# def compare_groups(json_path: str, output_type = OutputType.STDOUT_ONLY, out_path = "out.txt"):
+#     """Finds the difference between groups created by find_neighbors_list().\n
+#     json_path: The path to the JSON file to use data from. Must contain the keys
+#     "groups", pointing to a list of lists structured like:\n
+#         [[1.0, ['1', '2', '3']]], where 1.0 is the value of
+#         the group, and '1', '2', and '3' are its constituents.
+#         While this is only an example of one group list, "groups"
+#         consists of all group lists to review. A full example of groups could be:
+#         [[[1.0, ['1', '2', '3']]], [[1.2, ['3']], [1.0, ['2', '1']]]]
+#     Additionally, "num_groups" can be used to specify
+#     the number of groups to review. If larger than len(groups)
+#     or not present in json_path, it will default to len(groups).
+#     Finally, group_names can be used to specify the names of different
+#     group lists present in "groups". If not present all names will default
+#     to their index (starting at 1 instead of 0) within "groups". If present but shorter than len(groups),
+#     all groups without a name will be assigned their index (starting at 1 instead of 0) as their name.\n
+#     write_output: Where to put the output of this file. Options are "STDOUT_ONLY",
+#     "STDOUT_AND_FILE", and "FILE_ONLY".\n
+#     out_path: The path to write the text output of this function to, if output_type is
+#     STDOUT_ONLY or STDOUT_AND_FILE\n
+#     debug: Whether to print extra information for debugging\n"""
+
+#     with open(json_path, "r") as f:
+#         data = json.load(f)
+
+#     if 'groups' in data:
+#         print_output("Found groups! Continuing...", output_type, out_path)
+#         groups = data['groups']
+
+#     else:
+#         print_output("No groups found. Exiting function...", output_type, out_path)
+#         return
+
+#     group_num = len(groups)
+#     if 'num_groups' in data:
+#         group_num = data['num_groups']
+#         print_output(f"Found number of groups: {group_num}", output_type, out_path)
+#         if group_num > len(groups):
+#             group_num = len(groups)
+#             print_output(f"Number of groups is too big! Overriding to: {group_num}", output_type, out_path)
+#     else:
+#         print_output(f"No number of groups found. Defaulting to length of groups: {group_num}", output_type, out_path)
+
+#     if 'group_names' in data:
+#         group_names = data['group_names']
+#         print_output(f"Found group names: {group_names}", output_type, out_path)
+#         if len(group_names) < group_num:
+#             while len(group_names) < group_num:
+#                 group_names.append(len(group_names) + 1)
+#             print_output(f"Too few group names found! Appending default names: {group_names}", output_type, out_path)
+
+#     else:
+#         group_names = []
+#         while len(group_names) < group_num:
+#                 group_names.append(len(group_names) + 1)
+#         print_output(f"No group names found! Adding default names: {group_names}", output_type, out_path)
+
+# compare_groups("temp.json", OutputType.STDOUT_AND_FILE)
 
 # review_csv_timings("./first_run/data/scft_2_timings.csv", sec_div = 3600, debug = True)
 
