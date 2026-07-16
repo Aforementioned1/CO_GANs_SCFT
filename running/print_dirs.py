@@ -47,13 +47,20 @@ groups = args.groups
 
 # target_dir = Path(sys.argv[1])
 
+out_strs = []
+total_dirs = 0
+
 dir_amt = 0
 out_str = ""
 
 for d in sorted(target_dir.iterdir(), key = lambda d: int(d.stem) if num else d):
-    if dir_amt > groups:
+    if dir_amt >= groups:
         print(f"DIR AMT reached! (dir_amt: {dir_amt}, groups: {groups})")
+        if len(out_str) > 1:
+            out_str = out_str.rstrip(",")
         print(out_str + "\n")
+        out_strs.append(out_str)
+        total_dirs += dir_amt
         dir_amt = 0
         out_str = ""
     if d.is_dir():
@@ -83,11 +90,15 @@ for d in sorted(target_dir.iterdir(), key = lambda d: int(d.stem) if num else d)
     else:
         print(f"{d.name} is not a directory!")
 
+out_strs.append(out_str)
+total_dirs += dir_amt
+
 if len(out_str) > 1:
     out_str = out_str.rstrip(",")
 
-print(out_str)
-print(dir_amt)
+for string in out_strs:
+    print(string)
+print(f"Final directory amount: {dir_amt}\nTotal directory amount: {total_dirs}")
 
 if clip:
     pyperclip.copy(out_str)
