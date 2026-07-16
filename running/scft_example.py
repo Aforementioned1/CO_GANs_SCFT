@@ -101,26 +101,16 @@ else:
 
 # 0 (PREP_SCFT_1)
 if num == 0:
-    # print("--- Step", param['step'], "---")
+    print("PREP_SCFT_1 (0)")
     # prepare files
     run_scft.prepare_files(in_path = param_scft_1["in_path"], out_path = param_scft_1["out_path"],
                            out_name = param["rf_name"],
                 param_path = param_scft_1["param"], command_path = param_scft_1["command"], run_path = param_scft_1["run"],
                 debug = debug)
 
-### DEPRECATED
-# # step 1
-# if num == 1:
-#     # print("--- Step", param['step'], "---")
-#     # run SCFT for directories 1-250 in scft_1
-#     run_scft.execute_num(in_path = param_scft_1["out_path"], start = min, end = max,
-#                          adv_checking = param_scft_1["adv_checking"],
-#                         timing = param_scft_1["timing"], clean_timing = True, time_path = param_scft_1["time_path"],
-#                         debug = debug)
-
 # 1 (SCFT_1_TO_CSV)
 if num == 1:
-    print("--- Step", param['step'], "---")
+    print("SCFT_1_TO_CSV (1)")
     # combine data to CSV file
     run_scft.to_csv_num(dir_path = param_scft_1["out_path"], num_start = min, num_end = max,
                         output = param_scft_1["data_path"], debug = debug)
@@ -128,6 +118,7 @@ if num == 1:
 # 2 (SCFT_1_CONV)
 # this code is from conv_helper.py
 if num == 2:
+    print("SCFT_1_CONV (2)")
     iter = 0
     conv = 0
     i = 0
@@ -162,11 +153,12 @@ if num == 2:
 
 # 3 (SCFT_1_TIME)
 if num == 3:
+    print("SCFT_1_TIME (3)")
     run_scft.review_csv_timings(param_scft_1["time_path"], sec_div = param_scft_1["sec_div"], debug = debug)
 
 # 4 (PREP_SCFT_2)
 if num == 4:
-    print("--- Step", param['step'], "---")
+    print("PREP_SCFT_2 (4)")
     # read names of each initial guess (should be 1-250) and whether they converged
     names = run_scft.read_csv_col(in_path = param_scft_1["data_path"], 
                                   col = param["name_col"], debug = debug)
@@ -181,11 +173,9 @@ if num == 4:
     conv = run_scft.read_csv_col(in_path = param_scft_1["data_path"], col = param["conv_col"],
                 data_lambda = lambda text: True if text == "True" else False, debug = debug)
 
-    print("--- Step", param['step'], "---")
     # get all guesses that converged with step 1
     conv_names = run_scft.find_true_names(bools = conv, names = names)
 
-    print("--- Step", param['step'], "---")
     # prepare for second SCFT pass
     # scft_2's in should be the same as scft_1's out, but decided to make separate param
     run_scft.prepare_files_second(in_path = param_scft_2["in_path"], dir_names = conv_names,
@@ -195,7 +185,7 @@ if num == 4:
 
 # 5 (FIX_W_BASIS)
 if num == 5:
-    print("--- Step", param['step'], "---")
+    print("FIX_W_BASIS (5)")
     # get ignored names for fixing w.bf files
     ignored_names = run_scft.read_csv_col(in_path = param["ignored_path"], col = param["ignored_col"], debug = debug)
 
@@ -216,19 +206,9 @@ if num == 5:
                              out_name = param["w_out_name"], write_fixed = param["write_fixed_w_basis"],
                              fixed_path = param["fixed_w_basis_path"], debug = debug)
 
-### DEPRECATED
-# # step 7
-# if param['step'] == 7 and param['step'] != param['stop_step']:
-#     print("--- Step", param['step'], "---")
-#     # execute PSCF - can still be done in numerical order as nonexistent
-#     # directories will just get skipped (though this will lead to a lot of printing)
-#     run_scft.execute_num(in_path = param_scft_2["out_path"], start = min, end = max,
-#                          adv_checking = param_scft_2["adv_checking"], timing = param_scft_2["timing"], clean_timing = True,
-#                          time_path = param_scft_2["time_path"], debug = debug)
-
 # 6 (SCFT_2_TO_CSV)
 if num == 6:
-    print("--- Step", param['step'], "---")
+    print("SCFT_2_TO_CSV (6)")
     # combine data to CSV file
     run_scft.to_csv_num(dir_path = param_scft_2["out_path"], num_start = min, num_end = max,
                         output = param_scft_2["data_path"], debug = debug)
@@ -236,6 +216,7 @@ if num == 6:
 # 7 (SCFT_2_CONV)
 # this code is from conv_helper.py
 if num == 7:
+    print("SCFT_2_CONV (7)")
     iter = 0
     conv = 0
     i = 0
@@ -270,10 +251,12 @@ if num == 7:
 
 # 8 (SCFT_2_TIME)
 if num == 8:
+    print("SCFT_2_TIME (8)")
     run_scft.review_csv_timings(param_scft_2["time_path"], sec_div = param_scft_2["sec_div"], debug = debug)
 
 # 9 (UNIQUE_SOLN)
 if num == 9:
+    print("UNIQUE_SOLN (9)")
     data = run_scft.read_csv_col(param_scft_2["data_path"], "free_energy", lambda text: float(text), True)
     clusters = run_scft.find_neighbors(data = data, excluded_vals = [-1], tol_debug = False, debug = debug)
     print(clusters)

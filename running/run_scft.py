@@ -772,7 +772,8 @@ def execute(in_path: str, adv_checking = True, timing = False, clean_timing = Fa
                 if debug:
                     print("Going to advanced checking!")
                 # get text from log file for parsing
-                log = Path(in_path) / entry.name / "log"
+                # log = Path(in_path) / entry.name / "log"
+                log = entry / "log"
                 text = log.read_text()
 
                 num = -1
