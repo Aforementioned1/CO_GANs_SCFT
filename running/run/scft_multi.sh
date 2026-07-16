@@ -2,7 +2,7 @@
 #SBATCH --job-name=CO_SCFT_array
 #SBATCH --output=/users/0/mumma026/CO_GANs_SCFT/running/log/scft/scft_%A/%a.out
 #SBATCH --error=/users/0/mumma026/CO_GANs_SCFT/running/log/scft/scft_%A/%a.err
-#SBATCH --array=18-20,27
+#SBATCH --array=1-5000
 #SBATCH --time=00:10:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
