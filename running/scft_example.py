@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser()
 
 step_choices = ["HELP", "PREP_SCFT_1", "SCFT_1_TO_CSV", "SCFT_1_CONV", "SCFT_1_TIME",
                 "PREP_SCFT_2", "FIX_W_BASIS", "SCFT_2_TO_CSV", "SCFT_2_CONV",
-                "PRINT_SCFT_2_TIME", "UNIQUE_SOLN"]
+                "SCFT_2_TIME", "UNIQUE_SOLN"]
 num_choices = [i for i in range(-1, len(step_choices) - 1)] 
 
 group = parser.add_mutually_exclusive_group(required = True)
@@ -258,8 +258,15 @@ if num == 8:
 if num == 9:
     print("UNIQUE_SOLN (9)")
     data = run_scft.read_csv_col(param_scft_2["data_path"], "free_energy", lambda text: float(text), True)
-    clusters = run_scft.find_neighbors(data = data, excluded_vals = [-1], tol_debug = False, debug = debug)
+    clusters = run_scft.find_neighbors(data = data, excluded_vals = [-1], const = 0, tol_debug = False, debug = debug)
+    print("--- Original Clusters ---")
     print(clusters)
-    print(f"Number of clusters: {len(clusters)}")
+
+    sorted_clusters = run_scft.find_neighbors(data = sorted(data), excluded_vals = [-1], const = 0, tol_debug = False, debug = debug)
+    print("--- Sorted Clusters ---")
+    print(sorted_clusters)
+
+    print(f"Number of clusters (original order): {len(clusters)}")
+    print(f"Number of clusters (sorted order): {len(sorted_clusters)}")
 
 print("Finished!")

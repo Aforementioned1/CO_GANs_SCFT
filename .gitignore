@@ -6,9 +6,9 @@ drum_ex
 __pycache__
 first_run_data
 data
-temp.py
-test.py
+temp.*
+test.*
 temp.json
 uniques
 second_run_data
-second_run
+*_run
