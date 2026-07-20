@@ -195,21 +195,26 @@ def prepare_files(in_path: str, out_path: str, out_name: str,
         for f in files:
             # prepare name with lambda
             name = in_name_lambda(f.name)
-            if debug:
-                print("Pre-lambda name:", f.name)
-                print("Post-lambda name:", name)
-            # make all directories to out_path/name/out (out must be included for later)
-            os.makedirs(out_path + "/" + name + "/out")
-            # copy the file to its target with predetermined name
-            shutil.copy(str(f), out_path + "/" + name + "/" + out_name)
-            # copy param file
-            shutil.copy(param_path, out_path + "/"  + name + "/param")
-            # copy command file
-            shutil.copy(command_path, out_path + "/"  + name + "/command")
-            # copy run file
-            shutil.copy(run_path, out_path + "/"  + name + "/run")
-            if debug:
-                print("Initialized", name, "directory")
+
+            if not Path(out_path + "/" + name + "/out").exists():
+                
+                if debug:
+                    print("Pre-lambda name:", f.name)
+                    print("Post-lambda name:", name)
+                # make all directories to out_path/name/out (out must be included for later)
+                os.makedirs(out_path + "/" + name + "/out")
+                # copy the file to its target with predetermined name
+                shutil.copy(str(f), out_path + "/" + name + "/" + out_name)
+                # copy param file
+                shutil.copy(param_path, out_path + "/"  + name + "/param")
+                # copy command file
+                shutil.copy(command_path, out_path + "/"  + name + "/command")
+                # copy run file
+                shutil.copy(run_path, out_path + "/"  + name + "/run")
+                if debug:
+                    print("Initialized", name, "directory")
+            else:
+                print(f"{f} already exists!")
     else:
         if debug:
             print(in_path, "does not exist or is not a directory! Skipping...")
@@ -334,6 +339,100 @@ def fix_w_basis(in_path: str, out_path: str, debug = False):
 
     with open(out_path, "w") as f:
         f.writelines(lines)
+
+def save_w_basis(in_dir: str, names: list[str], sub_name = "w.bf", debug = False):
+    """ Attempts to save w.bf (W basis) files that have been accidentally run through fix_w_basis()
+        multiple times.\n
+        in_dir: A path to a directory with subdirectories names to attempt to save\n
+        names: A list of names to attempt to save
+        sub_name: The name of w.bf file to look for. Defaults to "w.bf". An example
+        full path would be in_dir / names[0] / sub_name\n
+        debug: Whether to print extra information for debugging\n"""
+    # if debug:
+    #     print("Debug mode ON for fix_w_basis")
+    #     print("In path:", in_path)
+    #     print("Names:", names)
+
+    in_path = Path(in_dir)
+
+    for n in names:
+        with open((in_path / n / sub_name).absolute(), "r") as f:
+            # read as lines for easier processing
+            lines = f.readlines()
+
+        if debug:
+            print("Initial line 5:", lines[4])
+            print("Initial line 7:", lines[6])
+            print("Initial line 9:", lines[8])
+            print("Initial line 15:", lines[13])
+
+        # can always make it triclinic
+        lines[4] = "              triclinic\n"
+
+        # can always fix N_cell_param
+        lines[6] = "              6\n"
+
+        # fix cell_param - this one is trickier
+        lines[8] = lines[8].rstrip("\n")
+        while lines[8].rfind("    0.000    0.000    1.5707963") != -1:
+            lines[8].rstrip("    0.000    0.000    1.5707963")
+
+        lines[8] + "    0.000    0.000    1.5707963\n"
+
+        # can always make it 17000
+        lines[14] = "             17000\n"
+
+        if debug:
+            print("Final line 5:", lines[4])
+            print("Final line 7:", lines[6])
+            print("Final line 9:", lines[8])
+            print("Final line 15:", lines[13])
+
+        with open((in_path / n / sub_name).absolute(), "w") as f:
+            f.writelines(lines)
+
+def add_return(in_dir: str, names: list[str], sub_name = "w.bf", debug = False):
+    """ Attempts to save w.bf (W basis) files that have been accidentally run through fix_w_basis()
+        multiple times.\n
+        in_dir: A path to a directory with subdirectories names to attempt to save\n
+        names: A list of names to attempt to save
+        sub_name: The name of w.bf file to look for. Defaults to "w.bf". An example
+        full path would be in_dir / names[0] / sub_name\n
+        debug: Whether to print extra information for debugging\n"""
+    # if debug:
+    #     print("Debug mode ON for fix_w_basis")
+    #     print("In path:", in_path)
+    #     print("Names:", names)
+
+    in_path = Path(in_dir)
+
+    for n in names:
+        with open((in_path / n / sub_name).absolute(), "r") as f:
+            # read as lines for easier processing
+            lines = f.readlines()
+
+        if debug:
+            print("Initial line 5:", lines[4])
+            print("Initial line 7:", lines[6])
+            print("Initial line 9:", lines[8])
+            print("Initial line 15:", lines[13])
+
+        lines[4] += "\n"
+
+        lines[6] += "\n"
+
+        lines[8] += "\n"
+
+        lines[14] = "\n"
+
+        if debug:
+            print("Final line 5:", lines[4])
+            print("Final line 7:", lines[6])
+            print("Final line 9:", lines[8])
+            print("Final line 15:", lines[13])
+
+        with open((in_path / n / sub_name).absolute(), "w") as f:
+            f.writelines(lines)
 
 def fix_w_basis_dir(in_path: str, ignored_names: list[str], out_path: str,
                     in_name: str, out_name: str, write_fixed = False,
@@ -963,7 +1062,8 @@ def to_csv_num(dir_path: str, num_start: int, num_end: int, output: str, debug =
                     num = int(text[ind:ind+4].strip())
                     temp_data['iterations'] = num
                     num_it += 1
-                    print(num)
+                    if debug:
+                        print(num)
                 else:
                     temp_data['iterations'] = -1
                     
@@ -975,7 +1075,8 @@ def to_csv_num(dir_path: str, num_start: int, num_end: int, output: str, debug =
                     converged = True
                     num_conv += 1
                 temp_data['converged'] = converged
-                print(converged)
+                if debug:
+                    print(converged)
 
                 ind = text.find("fHelmholtz")
                 if ind != -1:

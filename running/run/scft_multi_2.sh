@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name=CO_SCFT_array
+#SBATCH --job-name=CO_SCFT_array_14_2_1
 #SBATCH --output=/users/0/mumma026/CO_GANs_SCFT/running/log/scft_2/scft_%A/%a.out
 #SBATCH --error=/users/0/mumma026/CO_GANs_SCFT/running/log/scft_2/scft_%A/%a.err
 #SBATCH --array=1-100
@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=1200m
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=mumma026@umn.edu
+#SBATCH --mail-user=mumma026@umn.edu,holm0994@umn.edu
 
 # Run multiple SCFT step 2 processes with Slurm arrays
 

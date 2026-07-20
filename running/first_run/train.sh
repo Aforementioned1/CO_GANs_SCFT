@@ -8,7 +8,7 @@
 #SBATCH --mem=6g
 #SBATCH --gres=gpu:1
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=blank@umn.edu
+#SBATCH --mail-user=mumma026@umn.edu
 #SBATCH --partition=v100
 
 # unload loaded modules

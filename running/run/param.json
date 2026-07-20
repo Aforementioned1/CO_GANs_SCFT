@@ -1,6 +1,7 @@
 {
     "gan_min": 1,
     "gan_max": 5000,
+    "detailed_conv": true,
     "scft_1": {
         "in_path": "input/gan_guesses",
         "out_path": "input/scft_1",

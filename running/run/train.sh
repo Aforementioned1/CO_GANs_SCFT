@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name=CO_GAN_training_SCFT
+#SBATCH --job-name=CO_GAN_training_SCFT_14_1
 #SBATCH --output=/users/0/mumma026/CO_GANs_SCFT/running/log/gan_%j.out
 #SBATCH --error=/users/0/mumma026/CO_GANs_SCFT/running/log/gan_%j.err
 #SBATCH --time=01:00:00
@@ -8,7 +8,7 @@
 #SBATCH --mem=6g
 #SBATCH --gres=gpu:1
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=blank@umn.edu
+#SBATCH --mail-user=mumma026@umn.edu,holm0994@umn.edu
 #SBATCH --partition=v100
 
 # unload loaded modules
@@ -33,7 +33,7 @@ mkdir -p ../running/$RUN_NAME/model/images
 python GAN_train.py --dataroot ../running/$RUN_NAME/data.pt \
     --out_dir_images ../running/$RUN_NAME/model/images \
     --out_dir_model ../running/$RUN_NAME/model \
-    --batch_size 256
+    --batch_size 256 \
     --lr 0.0002
 
 # deactivate venv after to be safe

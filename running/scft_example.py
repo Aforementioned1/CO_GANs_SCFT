@@ -5,8 +5,6 @@ A sample parameter file is provided in defaults.json.\n
 See README.md: SCFT Examples for information about the specifics of this program and
 see JSON Parameters for information about what parameters are required by this program"""
 
-######### CURRENTLY, THIS MUST BE RUN FROM .. (~/running) TO RESOLVE run_scft's IMPORT
-
 ############# ALSO ADDED SEC_DIV!!!
 
 # While some parameters may seem redundant, this program is intended to
@@ -14,7 +12,7 @@ see JSON Parameters for information about what parameters are required by this p
 # Despite this, custom modifications to the code could help repurpose parameters into real use.
 
 import run_scft
-# from pathlib import Path
+from pathlib import Path
 import sys
 import json
 import argparse
@@ -64,7 +62,7 @@ if num == -1:
     print("---------------------------------------------------------------------------------------------------------------------------------")
     print("Step Name    |  Number  |  Description")
     print("---------------------------------------------------------------------------------------------------------------------------------")
-    print("HELP            -1         Print this informative display")
+    print("HELP           -1          Print this informative display")
     print("PREP_SCFT_1     0          Prepare directories for GAN initial guesses so that they can be run through SCFT")
     print("SCFT_1_TO_CSV   1          Collect data from SCFT step 1 calculations and write it to a CSV file")
     print("SCFT_1_CONV     2          Print information regarding how many SCFT step 1 calculations converged")
@@ -75,6 +73,8 @@ if num == -1:
     print("SCFT_2_CONV     7          Print information regarding how many SCFT step 2 calculations converged")
     print("SCFT_2_TIME     8          Print information regarding how long SCFT step 1 calculations took")
     print("UNIQUE_SOLN     9          Print information regarding how many converged solutions from SCFT step 2 can be considered unique")
+    print("SCFT_1_CONV_OLD 10         (Deprecated): Print information regarding how many SCFT step 1 calculations converged")
+    print("SCFT_2_CONV_OLD 11         (Deprecated): Print information regarding how many SCFT step 2 calculations converged")
     print("---------------------------------------------------------------------------------------------------------------------------------")
 
 if param_path != None:
@@ -119,37 +119,66 @@ if num == 1:
 # this code is from conv_helper.py
 if num == 2:
     print("SCFT_1_CONV (2)")
-    iter = 0
-    conv = 0
-    i = 0
-    neither = 0
+    data = {
+        "suc":  0, # all in group SUC
+        "conv": 0, # SUC_CONV
+        "fin":  0, # SUC_MAX_ITER and SUC_NO_CONV
+        "iter": 0, # SUC_MAX_ITER
+        "nocv": 0, # SUC_NO_CONV
+        "warn": 0, # all in group WARN
+        "log":  0, # WARN_NO_LOG
+        "noit": 0, # WARN_NO_ITER
+        "unf":  0, # WARN_NOT_FIN
+        "err":  0  # ERR_NO_DIR
+    }
 
-    # should utilize run_scft's calc_state()
-    with open(param_scft_1['data_path'], "r") as f:
-        reader = csv.DictReader(f)
-        for r in reader:
-            #print(r['iterations'])
-            if r['converged'] == "True":
-                if debug:
-                    print("CONV", r)
-                i += 1
-                conv += 1
-            elif r['iterations'] == "2499":
-                if debug:
-                    print("ITER", r)
-                i += 1
-                iter += 1
+    for d in sorted(Path(param_scft_1["out_path"]).iterdir(), key = lambda d: int(d.stem) if num else d):
+        state = run_scft.calc_state(d.absolute(), debug = debug)
 
-            else:
-                # assumed to not have converged and not have maxed iterations
-                neither += 1
-                if debug:
-                    print("NEIT", r)
+        match state:
+            # group SUC
+            case "SUC_CONV":
+                data["suc"] += 1
+                data["conv"] += 1 
+            case "SUC_MAX_ITER":
+                data["suc"] += 1
+                data["fin"] += 1
+                data["iter"] += 1
+            case "SUC_NO_CONV":
+                data["suc"] += 1
+                data["fin"] += 1
+                data["nocv"] += 1
+            # group WARN
+            case "WARN_NO_LOG":
+                data["warn"] += 1
+                data["log"] += 1
+            case "WARN_NO_ITER":
+                data["warn"] += 1
+                data["noit"] += 1 
+            case "WARN_NOT_FIN":
+                data["warn"] += 1
+                data["unf"] += 1 
+            # group ERR
+            case "ERR_NO_DIR":
+                data["err"] += 1
 
-    print("Number CONV(erged):", conv)
-    print("Number (fully) ITER(ated):", iter)
-    print("Number CONV(erged)/(fully) ITER(ated):", i)
-    print("Number NEIT(her)", neither)
+    # SUC
+    print(f"Finished (total):           {data['suc']}")
+    print(f"Finished (converged):       {data["conv"]}")
+    print(f"Finished (not converged):   {data["fin"]}")
+    if param['detailed_conv']:
+        print(f"Finished (max iterations):  {data['iter']}")
+        print(f"Finished (no convergence):  {data['nocv']}")
+
+    # WARN
+    print(f"Unfinished (total):         {data['warn']}")
+    if param['detailed_conv']:
+        print(f"Unfinished (no log):        {data['log']}")
+        print(f"Unfinished (no iterations): {data['noit']}")
+        print(f"Unfinished (iterations):    {data['unf']}")
+
+    # ERR
+    print(f"Error (no directory):        {data['err']}")
 
 # 3 (SCFT_1_TIME)
 if num == 3:
@@ -217,6 +246,132 @@ if num == 6:
 # this code is from conv_helper.py
 if num == 7:
     print("SCFT_2_CONV (7)")
+    data = {
+        "suc":  0, # all in group SUC
+        "conv": 0, # SUC_CONV
+        "fin":  0, # SUC_MAX_ITER and SUC_NO_CONV
+        "iter": 0, # SUC_MAX_ITER
+        "nocv": 0, # SUC_NO_CONV
+        "warn": 0, # all in group WARN
+        "log":  0, # WARN_NO_LOG
+        "noit": 0, # WARN_NO_ITER
+        "unf":  0, # WARN_NOT_FIN
+        "err":  0  # ERR_NO_DIR
+    }
+
+    for d in sorted(Path(param_scft_2["out_path"]).iterdir(), key = lambda d: int(d.stem) if num else d):
+        state = run_scft.calc_state(d.absolute(), debug = debug)
+
+        match state:
+            # group SUC
+            case "SUC_CONV":
+                data["suc"] += 1
+                data["conv"] += 1 
+            case "SUC_MAX_ITER":
+                data["suc"] += 1
+                data["fin"] += 1
+                data["iter"] += 1
+            case "SUC_NO_CONV":
+                data["suc"] += 1
+                data["fin"] += 1
+                data["nocv"] += 1
+            # group WARN
+            case "WARN_NO_LOG":
+                data["warn"] += 1
+                data["log"] += 1
+            case "WARN_NO_ITER":
+                data["warn"] += 1
+                data["noit"] += 1 
+            case "WARN_NOT_FIN":
+                data["warn"] += 1
+                data["unf"] += 1 
+            # group ERR
+            case "ERR_NO_DIR":
+                data["err"] += 1
+
+    # SUC
+    print(f"Finished (total):           {data['suc']}")
+    print(f"Finished (converged):       {data["conv"]}")
+    print(f"Finished (not converged):   {data["fin"]}")
+    if param['detailed_conv']:
+        print(f"Finished (max iterations):  {data['iter']}")
+        print(f"Finished (no convergence):  {data['nocv']}")
+
+    # WARN
+    print(f"Unfinished (total):         {data['warn']}")
+    if param['detailed_conv']:
+        print(f"Unfinished (no log):        {data['log']}")
+        print(f"Unfinished (no iterations): {data['noit']}")
+        print(f"Unfinished (iterations):    {data['unf']}")
+
+    # ERR
+    print(f"Error (no directory):        {data['err']}")
+
+# 8 (SCFT_2_TIME)
+if num == 8:
+    print("SCFT_2_TIME (8)")
+    run_scft.review_csv_timings(param_scft_2["time_path"], sec_div = param_scft_2["sec_div"], debug = debug)
+
+# 9 (UNIQUE_SOLN)
+if num == 9:
+    print("UNIQUE_SOLN (9)")
+    data = run_scft.read_csv_col(param_scft_2["data_path"], "free_energy", lambda text: float(text), True)
+    clusters = run_scft.find_neighbors(data = data, excluded_vals = [-1], const = 0, tol_debug = False, debug = debug)
+    print("--- Original Clusters ---")
+    print(clusters)
+
+    sorted_clusters = run_scft.find_neighbors(data = sorted(data), excluded_vals = [-1], const = 0, tol_debug = False, debug = debug)
+    print("--- Sorted Clusters ---")
+    print(sorted_clusters)
+
+    print(f"Number of clusters (original order): {len(clusters)}")
+    print(f"Number of clusters (sorted order): {len(sorted_clusters)}")
+
+# 10 (SCFT_1_CONV_OLD)
+# this code is from conv_helper.py
+# NOTE: this function is deprecated and will likely be removed in a later version of the code!!!
+if num == 10:
+    print("SCFT_1_CONV_OLD (10)")
+    print("This function is deprecated and will likely be removed in a later version of the code!!!")
+    iter = 0
+    conv = 0
+    i = 0
+    neither = 0
+
+    # should utilize run_scft's calc_state()
+    with open(param_scft_1['data_path'], "r") as f:
+
+        reader = csv.DictReader(f)
+        for r in reader:
+            #print(r['iterations'])
+            if r['converged'] == "True":
+                if debug:
+                    print("CONV", r)
+                i += 1
+                conv += 1
+            elif r['iterations'] == "2499":
+                if debug:
+                    print("ITER", r)
+                i += 1
+                iter += 1
+
+            else:
+                # assumed to not have converged and not have maxed iterations
+                neither += 1
+                if debug:
+                    print("NEIT", r)
+
+    print("Number CONV(erged):", conv)
+    print("Number (fully) ITER(ated):", iter)
+    print("Number CONV(erged)/(fully) ITER(ated):", i)
+    print("Number NEIT(her)", neither)
+
+# 7 (SCFT_2_CONV_OLD)
+# this code is from conv_helper.py
+# NOTE: this function is deprecated and will likely be removed in a later version of the code!!!
+if num == 11:
+    print("SCFT_2_CONV_OLD (11)")
+    print("This function is deprecated and will likely be removed in a later version of the code!!!")
     iter = 0
     conv = 0
     i = 0
@@ -248,25 +403,5 @@ if num == 7:
     print("Number (fully) ITER(ated):", iter)
     print("Number CONV(erged)/(fully) ITER(ated):", i)
     print("Number NEIT(her)", neither)
-
-# 8 (SCFT_2_TIME)
-if num == 8:
-    print("SCFT_2_TIME (8)")
-    run_scft.review_csv_timings(param_scft_2["time_path"], sec_div = param_scft_2["sec_div"], debug = debug)
-
-# 9 (UNIQUE_SOLN)
-if num == 9:
-    print("UNIQUE_SOLN (9)")
-    data = run_scft.read_csv_col(param_scft_2["data_path"], "free_energy", lambda text: float(text), True)
-    clusters = run_scft.find_neighbors(data = data, excluded_vals = [-1], const = 0, tol_debug = False, debug = debug)
-    print("--- Original Clusters ---")
-    print(clusters)
-
-    sorted_clusters = run_scft.find_neighbors(data = sorted(data), excluded_vals = [-1], const = 0, tol_debug = False, debug = debug)
-    print("--- Sorted Clusters ---")
-    print(sorted_clusters)
-
-    print(f"Number of clusters (original order): {len(clusters)}")
-    print(f"Number of clusters (sorted order): {len(sorted_clusters)}")
 
 print("Finished!")
