@@ -21,14 +21,14 @@
   - [JSON Parameters](#json-parameters)
 
 ## A Note on the Purpose of This Fork
-This repository is a fork from [GANs_SCFT](https://github.com/kdorfmanUMN/GANs_SCFT), originally authored by [Peng-Yu Chen](https://github.com/pengyuchen) and colleagues. The purpose of this fork is to provide utilities to help users connect the gaps left from GANs_SCFT's code, such as by provided advanced data augmentation helpers and more data compilation helpers. All Python files that provide utilities from this fork are currently located in the directory `running`. Additional Shellscript helper files are located in [`scripts`](../scripts). Finally, some examples of real file usages will later be located in [`usage`](../usage). See [`README.md`](../README.md) in the main directory for more detailed information on the purpose and utilities of the original repository.
+This repository is a fork from [GANs_SCFT](https://github.com/kdorfmanUMN/GANs_SCFT), originally authored by [Peng-Yu Chen](https://github.com/pengyuchen) and colleagues. The purpose of this fork is to provide utilities to help users connect the gaps left from GANs_SCFT's code, such as by provided advanced data augmentation helpers and more data compilation helpers. This enables "industrialization" of the paper's original procedures, allowing for rapid iteration and large quantities of tests. All Python files that provide utilities from this fork are currently located in the directory `running`. Additional Shellscript helper files are located in [`scripts`](../scripts). Finally, some examples of real file usages will later be located in [`usage`](../usage). See [`README.md`](../README.md) in the main directory for more detailed information on the purpose and utilities of the original repository.
 
 This documentation is currently outdated, sorry!
 
 <!-- ## Overview -->
 
 ## Training Helpers
-The file [`training.py`](./training.py) contains helper functions for GAN training and data preparation.
+The file [`training.py`](./training.py) contains helper functions for GAN training and data preparation. It has not been updated recently, is quite underdeveloped, and currently has few real uses.
 
 #### Data Augmentation
 One area that warrants the development of additional code to simplify the training proccess is the data preparation process. The main utility provided by GANs_SCFT is [`data_processor.py`](../preprocessing/data_processor.py). This file allows users to randomly upscale, translate, rotate, and downscale once again to create multiple diverse data points from one SCFT initial_guess. It also converts `.rf` initial guesses into `.pt` Pytorch tensors. The exact usage of this file within the paper [Gaming self-consistent field theory: Generative block polymer phase discovery](https://doi.org/10.1073/pnas.2308698120) is somewhat unclear, so the `training.py` helper for this program is currently underdeveloped. [`augment()`](./training.py#L55) currently reads a directory of `.rf` initial guesses, augments each once, and outputs them as `.pt` files to a specified directory.
@@ -38,10 +38,10 @@ A second area that is made easier with the use of `training.py` is tensor reshap
 NOTE: This function currently does not do any checking to make sure tensor dimensions are correct, and could potential through an error that way!
 
 ## SCFT Helpers
-The file [`training.py`](./training.py) contains helper functions for preparing data from the GAN to be run through PSCF, running PSCF, and collecting/analyzing the results of PSCF.
+The file [`run_scft.py`](./run_scft.py) contains helper functions for preparing data from the GAN to be run through PSCF, running PSCF, and collecting/analyzing the results of PSCF. If you are looking for a less in-depth view, it is recommended that you read [SCFT Examples](#scft-examples) first.
 
 #### File Preparation
-After generating guesses with GANs_SCFT's program [`../postprocessing/generate_guess.py`](../postprocessing/generate_guess.py), files are outputted in the format `guess_x.rf`, where x represents the GAN's guess number (ex `guess_1.rf` or `guess_2.rf`). This is slightly problematic, as it is preferable to structure files each in their individual directory, as they are in both [PSCF's examples](https://github.com/dmorse/pscfpp/tree/master/examples) and GANs_SCFT's [Data Repository for U of M (DRUM) files](https://hdl.handle.net/11299/257550). A sample file tree is depicted below:\
+After generating guesses with GANs_SCFT's program [`../postprocessing/generate_guess.py`](../postprocessing/generate_guess.py), files are outputted in the format `guess_x.rf`, where x represents the GAN's guess number (ex. `guess_1.rf` or `guess_2.rf`). This is slightly problematic, as it is preferable to structure files each in their individual directory, as they are in both [PSCF's examples](https://github.com/dmorse/pscfpp/tree/master/examples) and GANs_SCFT's [Data Repository for U of M (DRUM) files](https://hdl.handle.net/11299/257550). A sample file tree is depicted below:\
 <code>.\
 ├── 1\
 │   ├── out\
@@ -62,7 +62,7 @@ c.bf, w.bf, and log: Created during the process of running PSCF\
 command, param, and run: Files that are required for PSCF but can be duplicated and used across various PSCF calculations\
 rgrid.rf: A PSCF initial guess
 
-This stucture makes running PSCF considerably easier, as one must only run `./run` (or `source ./run` if they lack the execute permission) in order to execute a PSCF calculation. All output and intermediate files are saved locally, so it is clear which files are associated with which initial guess. To easily prepare a directory of GAN guesses to be run through PSCF, the function [`prepare_files()`](./run_scft.py#L13) has been added.
+This stucture makes running PSCF considerably easier, as one must only run `./run` (or `source ./run` if they lack the execute permission) to execute a PSCF calculation. All output and intermediate files are saved locally, so it is clear which files are associated with which initial guess. To easily prepare a directory of GAN guesses to be run through PSCF, the function [`prepare_files()`](./run_scft.py#L13) has been added.
 
 #### Running PSCF
 While GANs_SCFT possesses the ability to generate initial guesses for PSCF, it does not provide a utility to easily run these guesses through PSCF. Additionally, the original repository does not contain any `param`, `command`, or `run` files to be used with this. To solve this issue, the functions [`run()`](./run_scft.py#L279), [`execute_dir()`](./run_scft.py#L323), and [`execute_num()`](./run_scft.py#L432) are included in this repository. `run()` runs a single PSCF calculation, and `execute_dir()` executes `run()` for each subdirectory in a provided input directory, in alphanumeric order. `execute_num()` allows users to specify a range of numerical directory names to execute, opening the possibility to run PSCF in numerical order. Both functions also have the optional ability to run "advanced checking", which searches existing `log` files to see if they either converged or reached the max amount of iterations (currently 2500) and does not rerun the calculation if so. Otherwise, the program will search for the existence of any `log` file at all. This can be problematic in the edge case when a calculation was started but did not converge or reach the maximum amount of iterations before being terminated. These three functions also support timing helpers, which allows users to understand and track how long PSCF calculations will likely take or are taking. `execute_dir()` and `execute_num()` additionally have the ability to output all timing data in CSV format to a specified file path. Finally, the directories [`first`](./first) and [`second`](./second) contain [`param`](./first/param), [`command`](./first/command), and [`run`](./first/run) files (see information on the second SCFT pass [here](#second-scft)). Although minor modifications were made to [`first`'s `command`](./first/command) due to a feature that has likely been removed from PSCF in a newer release and both `run` files were newly created, the other files were obtained from GANs_SCFT's [DRUM files](https://hdl.handle.net/11299/257550), in the DRUM directory `./Data_Generative_SCFT/post_scft`. These resources should enable users to easily execute PSCF for an entire directory of initial guesses.
@@ -103,8 +103,7 @@ This section describes the examples provided by this fork. With them, one can ea
 #### GAN Training Examples
 There are currently no examples for this part of the process, as it is underdeveloped. Be on the lookout for more information in future commits.
 
-#### SCFT Examples
-**NOTE: This section may be removed in future commmits**
+#### SCFT Example
 The file [`scft_example.py`](./scft_example.py) provides critical utilities for the SCFT section of the project. This file performs all steps necessary for the entire two-step SCFT process, by:
 - Preparing directories for the files directly outputted from the GAN for initial SCFT calculations (see [File Preparation](#file-preparation))
 - Running the first pass of SCFT with the previously prepared files (see [Running PSCF](#running-pscf))
@@ -117,13 +116,11 @@ The file [`scft_example.py`](./scft_example.py) provides critical utilities for 
 
 `scft_example.py` accepts a JSON parameter file as a command line argument. A [sample parameter file](./defaults.json) with default values is provided with this repository. To use it with `scft_example.py`, run the following command:\
 `python scft_example.py defaults.json`\
-If not file is passed into the program as a command line argument, it will immediately exit. If a parameter file is not properly structured or lacks some necessary keys, the program will likely throw an error (see [JSON's website](https://www.json.org/json-en.html) for some information on how JSON files are structured). Detailed information on all necessary parameters will be provided in a later version of this documentation. Please refer to [`defaults.json`](./defaults.json) to see what parameters must be provided for now.
+If not file is passed into the program as a command line argument, it will immediately exit. If a parameter file is not properly structured or lacks some necessary keys, the program will likely throw an error (see [JSON's website](https://www.json.org/json-en.html) for some information on how JSON files are structured). Detailed information on all necessary parameters will be provided in a later version of this documentation. Please refer to [`run/param.json`](./run/param.json) to see what parameters must be provided for now.
 
 #### JSON Parameters
 **NOTE: This section may be removed in future commmits**
 The file explained in the previous section, `scft_example.py`, requires the input of a JSON parameter file to specify how the code should operate without needing to actually modify it. A list of each parameter and what it does is given below. While some parameters may seem redundant, this program is intended to give users as much customizability as possible without touching this program's code. Despite this, custom modifications to the code could help repurpose parameters into real use.
-- step: The step the current program is on. In `scft_example.py`, this is a value from 0-9, inclusive, where 0 signifies a program that has not started and 9 signifies a program that has completely finished. The JSON parameter file that is inputted will automatically be rewritten with each step to update it. This allows the program to resume execution at the same place that it was halted.
-- stop_step: A step to stop at. The program will be halted if step every reaches stop_step. Therefore, a stop_step value of -1 will allow for the program to completely execute.
 - debug: Whether or not to print each `run_scft.py` method's debug information.
 - gan_min: The lowest GAN guess number to use. This will almost always be 0 or 1.
 - gan_max: The highest GAN guess number to use. This depends on how high the program should search and how many GAN guesses were generated.
@@ -140,6 +137,13 @@ The file explained in the previous section, `scft_example.py`, requires the inpu
 - fixed_w_basis_path: Where to append names of the parent directories of every `w.bf` fixed in the program to, with each name separated by a new line (\n) character. See [Second SCFT Step](#second-scft-step) for more information.
 
 The following parameters constitute an "SCFT block":
+- in_path: The directory path to read from. The input of SCFT step 2 should generally be the output of SCFT step 1.
+- out_path: The directory path to write to.
+- param: A path to a PSCF parameter file to use for every SCFT calculation in the step. Defaults are provided at [`first/param`](./first/param) and [`second/param`](./second/param) for SCFT step 1 and step 2, respectively.
+- command: A path to a PSCF command file to use for every SCFT calculation in the step. Defaults are provided at [`first/command`](./first/command) and [`second/command`](./second/command) for SCFT step 1 and step 2, respectively.
+- run: A path to a Shell Script file to execute to run each SCFT calculation. Be careful, as this could potentially be replaced with a malicious file that does things other than running SCFT! Defaults are provided at [`first/run`](./first/run) and [`second/run`](./second/run) for SCFT step 1 and step 2, respectively.
+- time_path: The path to search for a CSV timings file at.
 - The rest of this documentation is currently unfinished! Sorry!
+
 
 The rest of this documentation is currently unfinished! Sorry!

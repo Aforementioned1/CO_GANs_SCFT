@@ -8,8 +8,6 @@
         "param": "first/param",
         "command": "first/command",
         "run": "first/run",
-        "adv_checking": true,
-        "timing": true,
         "time_path": "input/data/scft_1_timings.csv",
         "data_path": "input/data/scft_1.csv",
         "sec_div": 300
@@ -23,8 +21,6 @@
         "param": "second/param",
         "command": "second/command",
         "run": "second/run",
-        "adv_checking": true,
-        "timing": true,
         "time_path": "input/data/scft_2_timings.csv",
         "data_path": "input/data/scft_2.csv",
         "sec_div": 3600

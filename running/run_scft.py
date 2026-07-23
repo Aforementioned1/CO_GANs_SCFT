@@ -9,6 +9,10 @@ import csv
 import json
 from pathlib import Path
 from enum import Enum
+from itertools import repeat
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
+import colorsys
 
 f_DG = 2.74517041186 # free energy of the double gyroid phase
 
@@ -375,7 +379,7 @@ def save_w_basis(in_dir: str, names: list[str], sub_name = "w.bf", debug = False
         # fix cell_param - this one is trickier
         lines[8] = lines[8].rstrip("\n")
         while lines[8].rfind("    0.000    0.000    1.5707963") != -1:
-            lines[8].rstrip("    0.000    0.000    1.5707963")
+            lines[8] = lines[8].removesuffix("    0.000    0.000    1.5707963")
 
         lines[8] + "    0.000    0.000    1.5707963\n"
 
@@ -1136,7 +1140,7 @@ def find_neighbors(data: list[float], epsilon = 0.00001, excluded_vals = [],
     data points fall into each candidate as values\n
     data: A list of floats to classify\n
     epsilon: The allowed tolerance/difference for each cluster. Defaults to 0.00001 (10^-5)\n
-    excluded_vals: A list of values to ignore for forming clusters, entries near it will be skipped.
+    excluded_vals: A list of values to ignore for forming clusters. Entries near it will be skipped.
     This can be used to help filter out bad/empty data values (such as free energies of -1.0)\n
     tol_debug: Whether to print extra information regarding tolerance calculations for debugging.
     Note that this will print several lines for every entry in data\n
@@ -1178,7 +1182,7 @@ def find_neighbors(data: list[float], epsilon = 0.00001, excluded_vals = [],
                     if debug:
                         print("Found candidate: " + str(j) + "!")
                     found_cand = True
-                    if nums[j] is not None:
+                    if j in nums:
                         nums[j] += 1
                     else:
                         # maybe should be 2
@@ -1246,7 +1250,7 @@ def find_neighbors_list(data: list[float], names: list[str], epsilon = 0.00001,
                     if debug:
                         print("Found candidate: " + str(j) + "!")
                     found_cand = True
-                    if nums[j] is not None:
+                    if j in nums:
                         name = names[data.index(i)]
                         nums[j].append(name)
                     else:
@@ -1421,6 +1425,295 @@ def review_csv_timings(in_path: str, sec_div = 3600, debug = False):
             print(in_path, "does not exist or is not a file! Ignoring...")
         return False
     
+def read_multi_csv(dirs: list[str], csv_cols = [("free_energy", lambda text: float(text)), ("name", lambda text: text)],
+                   sub_path = "/data/scft_2.csv", debug = False) -> list[list[tuple]]:
+    """ Reads multiple CSV columns and outputs them as a list of lists of tuples.\n
+    dirs: A list of directory names to read from (see sub_path for how
+    to target each directory's CSV files).\n
+    csv_cols: A list of tuple str-lambda pairs. Each pair contains a CSV column to read
+    and a lambda to apply to the column (such as converting its data to a float).
+    See read_csv_col() for more information.\n
+    sub_path: A path to a CSV file in each directory. If you are using this fork's
+    default configurations, "/data/scft_2.csv" should be able to properly target
+    the files in most scenarios.\n
+    debug: Whether to print extra information for debugging\n"""
+    data = []
+
+    for d in dirs:
+        temp_cols = []
+        for c, lam in csv_cols:
+            col = read_csv_col(d + sub_path, c, lam, debug)
+            temp_cols.append(col)
+        data.append(list(zip(*temp_cols,repeat(d))))
+
+    return data
+
+    
+def improved_uniques(data: list[tuple[float, str, str]], epsilon = 0.00001, excluded_vals = [-1],
+                     const = 0, tol_debug = False, debug = False) -> dict[list[tuple[float, str, str]]]:
+    """ Finds information on unique solutions. This is designed to be an improved version
+    of find_neighbors() (hence the name) that preserves more information for future use. It
+    is also designed to work well with the output of read_multi_csv() (after being passed
+    through combine_lists()), which can allow for the processing of multiple trials worth of data.\n
+    data: A list of tuples consisting of float free energy values, string names, and string trail names.
+    This structure can easily be obtained by passing the output of read_multi_csv (with its default
+    configurations) through combine_lists().\n
+    epsilon: The allowed tolerance/difference for each cluster. Defaults to 0.00001 (10^-5)\n
+    excluded_vals: A list of values to ignore for forming clusters. Entries near it will be skipped.
+    This can be used to help filter out bad/empty data values (such as free energies of -1.0)\n
+    const: A constant that is subtracted from every value. This can be used
+    to compare the relative free energies of structures. Defaults to 0.\n
+    tol_debug: Whether to print extra information regarding tolerance calculations for debugging.
+    Note that this will print several lines for every entry in data\n
+    debug: Whether to print extra information for debugging. Defaults to False\n"""
+    if debug:
+        print("Debug mode ON for find_neighbors")
+        print("Raw data:", data)
+        print("Epsilon:", epsilon)
+        print("Excluded values:", excluded_vals)
+        print("Debug for tolerance calculations:", tol_debug)
+
+
+    cands = []
+    nums = {}
+    for i, name, trial in data:
+        i -= const
+        found_cand = False
+        if tol_debug:
+                print("Searching for exclusions...")
+        for j in excluded_vals:
+            if is_close(i, j, epsilon, tol_debug):
+                # print on debug bc it's more important info
+                if debug:
+                    print("Found exclusion: " + str(j) + "!")
+                # if it should be excluded, skip the rest of the search
+                found_cand = True
+                break
+        # don't start searching if it should be excluded
+        if not found_cand:
+            if tol_debug:
+                print("Searching for candidates...")
+            for j in cands:
+                if is_close(i, j, epsilon, tol_debug):
+                    # print on debug bc it's more important info
+                    if debug:
+                        print("Found candidate: " + str(j) + "!")
+                    found_cand = True
+                    if j in nums:
+                        nums[j].append((i, name, trial,))
+                    else:
+                        print("Error: A candidate was likely lost!")
+                        nums[j].append((i, name, trial,))
+                    # you can assume that something can never match two candidates
+                    break
+        if not found_cand:
+            if debug:
+                print("No candidate or exclusion found. Creating new candidate:", i)
+            cands.append(i)
+            nums[i] = [(i, name, trial,)]
+    if debug:
+        print("Candidates:", cands)
+        print("Numbers:", nums)
+
+    return nums
+
+def cluster_histogram(cluster: list[tuple[float, str, str]], out_path: str, colors: list[tuple[str, str]],
+                      px_wd = 1200, px_ht = 800, dpi = 100, bins = 250, debug = False):
+    """ Creates a histogram for a single unique cluster. The function's
+    framework can also be utilized to visualize the output of read_multi_csv()
+    after being run through combine_lines(). To use this function from the output
+    of improved_uniques(), one must access one of the outputted dict's values and
+    pass it in to this function as "cluster". See multi_cluster_histograms() to be
+    able to make a histogram for every cluster in a data set.\n
+    cluster: A list of tuples consisting of float free energy values, string names,
+    and string trial names. This structure is present in the values of the dict returned
+    by improved_uniques(). Additionally, this structure can be obtained by passing the
+    output of read_multi_csv() (with its default parameters) through combine_lists().\n
+    out_path: The path to write the histogram image to.\n
+    colors: A list of tuples consisting of hex string colors and string trial names to use
+    on the histogram. This allows for color-coding of each trial within the histogram.
+    This parameter must contain color values for every trial present in the dataset,
+    but may also provide additional (unused) colors. dynamic_hex_rainbow() can be used to
+    dynamically generate hex string colors in the format accepted by this method using a list
+    of inputted string trial names. An example of a valid string for data containing the names
+    "first_run" and "second_run" is given below:\n
+    [("#D7BDF2", "first_run"), ("#87F3E7", "second_run"), ("#85D6FF", "third_run"), ("#8693FF", "fourth_run")]\n
+    Although only "first_run" and "second_run" are present in this scenario, it is still completely
+    acceptable to give colors for additional trials such as "third_run" and "fourth_run".\n
+    px_wd: The width to use, in pixels.\n
+    px_ht: The height to use, in pixels.\n
+    dpi: The dots per inch value to use.\n
+    bins: The amount of histogram bins to use for each figure.\n
+    debug: Whether to print extra information for debugging\n"""
+    trial_clusters = {}
+
+    # old colors: [("#D7BDF2", "first_run"), ("#87F3E7", "second_run"), ("#85D6FF", "third_run"),
+    #             ("#8693FF", "fourth_run"), ("#CD83FF","eighth_run"), ("#D18BE5", "ninth_run"),
+    #             ("#DB84D8", "tenth_run"), ("#F17BAF", "eleventh_run"), ("#FF7978", "twelfth_run"),
+    #             ("#FF9155", "thirteenth_run")]
+
+    for c in cluster:
+        if c[2] in trial_clusters:
+            trial_clusters[c[2]].append(c)
+        else:
+            trial_clusters[c[2]] = [c]
+
+    trials = trial_clusters.keys()
+
+    if debug:
+        print(f"Trial-sorted clusters: {trial_clusters}")
+        print(f"Trials present: {trials}")
+
+    fixed_colors = []
+
+    for k in trials:
+        for c in colors:
+            if k == c[1]:
+                fixed_colors.append(c[0])
+                continue
+
+    if debug:
+        print(f"Colors: {fixed_colors}")
+
+    # fixed_colors = colors[:num_trials]
+
+    # if debug:
+    # print(trial_clusters.values())
+
+    energies = {k: [j[0] for j in v] for k, v in trial_clusters.items()}
+
+    # print(energies)
+    
+    fig, ax = plt.subplots(figsize=(px_wd / dpi, px_ht / dpi), dpi=dpi)
+    print(fig.get_size_inches(), "inches")
+
+    # ax.figure(figsize=(6,4), dpi=500)
+    # plt.xticks(np.arange(-0.04001, -0.03999, 0.000003))
+    # plt.ticklabel_format(style = 'plain', axis = 'both')
+    # plt.tick_params()
+    ax.hist(energies.values(), bins=bins, stacked = True, color = fixed_colors, label = trial_clusters.keys())
+    # 
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=6))
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
+    
+    plt.savefig(out_path, dpi = dpi)
+
+def multi_cluster_histograms(groups: dict[list[tuple[float, str, str]]], out_dir: str,
+                             name_lambda = lambda text: str(text) + ".png", px_wd = 1200,
+                             px_ht = 800, dpi = 100, bins = 200, debug  = False) -> None:
+    """ Runs the function cluster_histogram() for every cluster in groups.
+    This function is considerably slow and will end up producing many (somewhat unhelpful)
+    histograms, so it is recommended to only run cluster_histogram() for all of the data
+    or for specifically targeted clusters.\n
+    groups: A dict of groups (each group is a list of tuples containing a
+    free energy value, string name, and string trial name). This is the same structure as
+    the output of improved_uniques().\n
+    out_dir: A directory to output each image to.\n
+    name_lambda: A lambda to apply to each name. By default, each cluster's free energy
+    value is used as the name, and the suffix ".png" is appended to each file.\n
+    px_wd: The width to use, in pixels.\n
+    px_ht: The height to use, in pixels.\n
+    dpi: The dots per inch value to use.\n
+    bins: The amount of histogram bins to use for each figure.\n
+    debug: Whether to print extra information for debugging\n"""
+    for name, cluster in groups.items():
+        cluster_histogram(cluster, out_path = out_dir + "/" + name_lambda(name), px_wd = px_wd, px_ht = px_ht,
+                          dpi = dpi, bins = bins, debug = debug)
+
+
+def combine_lists(lists: list[list]) -> list:
+    """ Combines several lists into a single list, and returns it.\n
+    lists: The lists to combine.\n"""
+
+    out = []
+    for l in lists:
+        out.extend(l)
+
+    return out
+
+def hsv_to_hex(h: float, s: float, v: float) -> str:
+    """ Converts an HSV color to a hex string by using colorsys' hsv_to_rgb()
+    function and then applying formatting and a transformation.\n
+    h: An HSV hue value, between 0.0 and 1.0 inclusive.\n
+    s: An HSV saturation value, between 0.0 and 1.0 inclusive.\n
+    v: An HSV value value, between 0.0 and 1.0 inclusive.\n"""
+    r, g, b = colorsys.hsv_to_rgb(h, s, v)
+
+    return f"#{int(255 * r):02x}{int(255 * g):02x}{int(255 * b):02x}"
+
+def dynamic_hex_rainbow(names: list[str], s: float, v: float, min_clamp = 0.0, max_clamp = 1.0) -> list[tuple[str, str]]:
+    """ Creates a list of paired color-name tuples in an HSV gradient.
+    Each name in names is given a hex string color in evenly-spaced
+    intervals between min_clamp and max_clamp.\n
+    names: A list of string names to create a gradient for. The length of
+    the gradient will be the same as the length of names.\n
+    s: An HSV saturation value, between 0.0 and 1.0 inclusive.\n
+    v: An HSV value value, between 0.0 and 1.0 inclusive.\n
+    min_clamp: The lowest hue value to use. 0.0-0.5 are warmer colors
+    and 0.5-1.0 are cooler colors. Defaults to 0.0.\n
+    max_clamp: The highest hue value to use. 0.0-0.5 are warmer colors
+    and 0.5-1.0 are cooler colors. Defaults to 1.0.\n"""
+    colors = []
+    size = len(names)
+    ran = max_clamp - min_clamp
+
+    i = 0
+    for n in names:
+        hue = (ran * i) / size + min_clamp
+        hex = hsv_to_hex(hue, s, v)
+        colors.append((hex, n,))
+
+        i += 1
+
+    return colors
+
+colors = dynamic_hex_rainbow(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"], 0.5, 1.0, max_clamp = 1.0)
+
+groups = improved_uniques(combine_lists(read_multi_csv(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"])))
+
+# print(groups)
+
+# print(cluster_histogram(groups[2.70642211386], "ztest.png", debug = True))
+
+# multi_cluster_histograms(groups, "zimages", debug = True)
+
+# groups_2 = {}
+
+# for k, v in groups.items():
+#     if k > 3:
+#         groups_2[k] = v
+
+# print(groups_2)
+
+# multi_cluster_histograms(groups_2, "all_excl", debug = True)
+
+# x = [v for v in groups.values() if v[1] < 3]
+
+groups3 = []
+
+for v in groups.values():
+    for g in v:
+        if g[0] < 3:
+            groups3.append(g)
+
+# print(groups3)
+
+#[v for v in groups.values() for g in v if g[0] < 3]
+
+cluster_histogram(groups3,out_path= "zall.png", bins = 2000, colors = colors)
+# cluster_histogram(combine_lists(groups.values()),out_path= "zall.png", bins = 500, colors = colors)
+
+
+# ch = 0
+# for name, g in groups.items():
+#     print(f"{name}:\t {len(g)}", end = "   ")
+#     temp = f"{name}:\t {len(g)}   "
+#     ch += len(temp)
+#     if (ch > 90):
+#         print("")
+#         ch = 0
+# print("")
+
 # def compare_group(group_1: list[list[float | list[str]]], group_2: list[list[float | list[str]]],
 #                   output_type = OutputType.STDOUT_ONLY, out_path = "out.txt"):
 #     for num, vals in group_1:
