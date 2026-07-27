@@ -1,0 +1,55 @@
+{
+    "main": {
+        "name": "first_run",
+        "abs_path": "/home/coasr2026/CO_GANs_SCFT/running/znew_running",
+        "co_gans_path": "/home/coasr2026",
+        "move": true,
+        "move_path": "/home/path/to/shared"
+    },
+    "data_path": "run/data.pt",
+    "train": {
+        "slurm": {
+            "name": "CO_GAN_training",
+            "log_path": "/users/0/mumma026/CO_GANs_SCFT/running",
+            "time": "01:00:00",
+            "ntasks": "1",
+            "cpus_per_task": "2",
+            "mem": "6g",
+            "gres": "gpu:1",
+            "mail_type": "ALL",
+            "mail_user": "mumma026@umn.edu,holm0994@umn.edu",
+            "partition": "v100",
+            "time_inc": "00:30:00"
+        },
+        "batch_size": "128",
+        "learning_rate": "0.0002"
+    },
+    "gen": {
+        "slurm": {
+            "name": "CO_gen",
+            "log_path": "/users/0/mumma026/CO_GANs_SCFT/running",
+            "time": "00:30:00",
+            "ntasks": "1",
+            "cpus_per_task": "1",
+            "mem": "1g",
+            "mail_type": "ALL",
+            "mail_user": "mumma026@umn.edu,holm0994@umn.edu",
+            "time_inc": "00:15:00"
+        }
+    },
+    "scft_1": {
+        "slurm": {
+            "name": "CO_SCFT_1",
+            "log_path": "/users/0/mumma026/CO_GANs_SCFT/running",
+            "time": "01:00:00",
+            "ntasks": "1",
+            "cpus_per_task": "1",
+            "mem": "280m",
+            "mail_type": "ALL",
+            "mail_user": "mumma026@umn.edu,holm0994@umn.edu",
+            "array": "1-1000",
+            "time_inc": "00:15:00"
+        },
+        "sections": 1000
+    }
+}

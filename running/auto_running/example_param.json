@@ -1,0 +1,34 @@
+{
+    "gan_min": 1,
+    "gan_max": 5000,
+    "detailed_conv": true,
+    "scft_1": {
+        "in_path": "{ABS_PATH}/{NAME}/gan_guesses",
+        "out_path": "{ABS_PATH}/{NAME}/scft_1",
+        "param": "{CO_GANS_PATH}/first/param",
+        "command": "{CO_GANS_PATH}/first/command",
+        "run": "{CO_GANS_PATH}/first/run",
+        "time_path": "{ABS_PATH}/{NAME}/data/scft_1_timings.csv",
+        "data_path": "{ABS_PATH}/{NAME}/data/scft_1.csv",
+        "sec_div": 300
+    },
+    "rf_name": "rgrid.rf",
+    "name_col": "name",
+    "conv_col": "converged",
+    "scft_2": {
+        "in_path": "{ABS_PATH}/{NAME}/scft_1",
+        "out_path": "{ABS_PATH}/{NAME}/scft_2",
+        "param": "{CO_GANS_PATH}/second/param",
+        "command": "{CO_GANS_PATH}/second/command",
+        "run": "{CO_GANS_PATH}/second/run",
+        "time_path": "{ABS_PATH}/{NAME}/data/scft_2_timings.csv",
+        "data_path": "{ABS_PATH}/{NAME}/data/scft_2.csv",
+        "sec_div": 3600
+    },
+    "ignored_path": "{ABS_PATH}/{NAME}/data/ignored_names.csv",
+    "ignored_col": "name",
+    "w_in_name": "w.bf",
+    "w_out_name": "w.bf",
+    "write_fixed_w_basis": true,
+    "fixed_w_basis_path": "{ABS_PATH}/{NAME}/data/ignored_names.csv"
+}
