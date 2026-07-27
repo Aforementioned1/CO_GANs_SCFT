@@ -33,6 +33,39 @@ def init_template(text: str, replace: dict) -> str:
 
     return text
 
+
+def str_to_timedelta(time: str):
+    """ Converts a string formatted like "HH:MM:SS" to a
+    datetime timedelta object\n
+    time: A string formatted like "HH:MM:SS" """
+    h, m, s = time.split(":")
+    delta = timedelta(hours = int(h), minutes = int(m), seconds = int(s))
+
+    return delta
+
+def timedelta_to_str(delta: timedelta):
+    """ Converts a datetime.timedelta object into a string
+    formatted like "HH:MM:SS"\n
+    delta: A timedelta object"""
+    h = int(delta.total_seconds() // 3600)
+    m = int((delta.total_seconds() % 3600) // 60)
+    s = int(delta.total_seconds() % 60)
+
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+def add_time_strings(time_1: str, time_2: str):
+    """ Converts two time strings to timedelta objects using str_to_timedelta(),
+    adds them, then converts the timedelta back into a string and returns it.
+    Each string must be formatted like "HH:MM:SS"\n
+    time_1: The first time to add, in string "HH:MM:SS" format\n
+    time_2: The second time to add, in string "HH:MM:SS" format"""
+    delt1 = str_to_timedelta(time_1)
+    delt2 = str_to_timedelta(time_2)
+
+    total = delt1 + delt2
+
+    return timedelta_to_str(total)
+
 class Job:
     """ Represents a Slurm job\n
     job_id: The ID of this job\n
@@ -90,7 +123,7 @@ class Job:
 
         return params
 
-    def write_template(self):
+    def create_script(self):
         """ Writes """
         print("Attempting to write template...")
 
@@ -119,44 +152,18 @@ class Job:
 
         print(f"Wrote file to {self.slurm_path}")
 
-    def make_train_script(train_param: dict, main_param: dict):
-        print("Making train.sh script...")
-        slurm_param = train_param['slurm']
-
-        replacements = {
-            "{SLURM_NAME}": slurm_param['slurm_name'],
-            "{NAME}": main_param['name'],
-            "{LOG_PATH}": slurm_param['log_path'],
-            "{TIME}": slurm_param['time'],
-            "{TASKS}": slurm_param['ntasks'],
-            "{CPUS}": slurm_param['cpus'],
-            "{MEM}": slurm_param['mem'],
-            "{GRES}": slurm_param['gres'],
-            "{MAIL_TYPE}": slurm_param['mail_type'],
-            "{MAIL_USER}": slurm_param['mail_user'],
-            "{PARTITION}": slurm_param['partition'],
-            "{CO_GANS_PATH}": main_param['co_gans_path'],
-            "{ABS_PATH}": main_param['abs_path'],
-            "{BATCH_SIZE}": train_param['batch_size'],
-            "{LEARNING_RATE}": train_param['learning_rate']
-        }
-
-        with open((Path(main_param['co_gans_path']) / "CO_GANs_SCFT/running/auto_running/train_template.sh"), "r") as f:
-            text = f.read()
-
-        text = init_template(text, replacements)
-
-        with open((Path(main_param['abs_path']) / main_param['name'] / "train.sh"), "w") as f:
-            f.write(text)
-
-        print(f"Wrote file to {(Path(main_param['abs_path']) / main_param['name'] / 'train.sh')}")
-
     def schedule(self):
+        """ Schedules this job to run """
+        print("Attempting to schedule job...")
         command = ["sbatch", "--parsable", self.slurm_path]
         result = subprocess.run(command, capture_output = True, text = True, check = True)
+
+        print("Done!")
     
         # strip text to be safe
         self.job_id = result.stdout.strip()
+        print(f"Result: {result.stdout} | Job ID: {self.job_id}")
+
         return self.job_id
 
     def check(self):
@@ -189,10 +196,14 @@ class Job:
 
     def wait_for_slurm_end(self, period = 120.0):
         """ Periodically checks for this Slurm job to finish.
-        If the Slurm job's status becomes "FAILED", "TIMEOUT", "NODE_FAIL" or
+        If the Slurm job's status becomes "FAILED", "NODE_FAIL" or
         "OUT_OF_MEMORY", terminates the program\n
         This function is blocking and will not return execution until this job's
-        status becomes "COMPLETED" """
+        status becomes "COMPLETED"\n
+        If auto_reschedule is True, this function will continue to schedule jobs
+        with longer times and recursively run this function until the job does not
+        timeout\n
+        period: The period between Slurm checks, in seconds. Defaults to 120s"""
         finished = False
 
         while not finished:
@@ -204,7 +215,18 @@ class Job:
                 if self.auto_reschedule:
                     print("Auto reschedule is ON!")
                     print("Attempting to reschedule...")
-                    print(f"Addition: {self.reschedule_add}")
+                    add = self.reschedule_add
+                    curr = self.param['time']
+                    total = add_time_strings(curr, add)
+                    print(f"Current: {curr} | Addition: {add} | Total: {total}")
+                    print(f"Setting parameter time config to be {total}...")
+                    self.param['time'] = total
+                    print("Done!")
+                    print("Overwriting Slurm script...")
+                    self.create_script()
+                    print("Done!")
+                    self.schedule()
+                    self.wait_for_slurm_end()
                 else:
                     print("Auto reschedule is OFF!")
                     print("Ending process...")
@@ -213,40 +235,9 @@ class Job:
             time.sleep(period)
 
 class BranchedJob(Job):
+    """ Represents a "branched" Slurm job, where multiple
+    jobs are run at the same time with the same purpose"""
     pass
-
-
-def str_to_timedelta(time: str):
-    """ Converts a string formatted like "HH:MM:SS" to a
-    datetime timedelta object\n
-    time: A string formatted like "HH:MM:SS" """
-    h, m, s = time.split(":")
-    delta = timedelta(hours = int(h), minutes = int(m), seconds = int(s))
-
-    return delta
-
-def timedelta_to_str(delta: timedelta):
-    """ Converts a datetime.timedelta object into a string
-    formatted like "HH:MM:SS"\n
-    delta: A timedelta object"""
-    h = int(delta.total_seconds() // 3600)
-    m = int((delta.total_seconds() % 3600) // 60)
-    s = int(delta.total_seconds() % 60)
-
-    return f"{h:02d}:{m:02d}:{s:02d}"
-
-def add_time_strings(time_1: str, time_2: str):
-    """ Converts two time strings to timedelta objects using str_to_timedelta(),
-    adds them, then converts the timedelta back into a string and returns it.
-    Each string must be formatted like "HH:MM:SS"\n
-    time_1: The first time to add, in string "HH:MM:SS" format\n
-    time_2: The second time to add, in string "HH:MM:SS" format"""
-    delt1 = str_to_timedelta(time_1)
-    delt2 = str_to_timedelta(time_2)
-
-    total = delt1 + delt2
-
-    return timedelta_to_str(total)
 
 def run_python(path: str, args: list):
     command = ["python", path].extend(args)
