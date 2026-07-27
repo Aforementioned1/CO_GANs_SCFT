@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name={GEN_NAME}_{NAME}
+#SBATCH --job-name={SLURM_NAME}_{NAME}
 #SBATCH --output={LOG_PATH}/{NAME}/log/gen_%j.out
 #SBATCH --error={LOG_PATH}/{NAME}/log/gen_%j.err
 #SBATCH --time={TIME}

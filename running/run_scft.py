@@ -1667,10 +1667,10 @@ def dynamic_hex_rainbow(names: list[str], s: float, v: float, min_clamp = 0.0, m
 
     return colors
 
-colors = dynamic_hex_rainbow(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"], 0.5, 1.0, max_clamp = 1.0)
+# colors = dynamic_hex_rainbow(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"], 0.5, 1.0, max_clamp = 1.0)
 
-groups = improved_uniques(combine_lists(read_multi_csv(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"])),
-                          const = f_DG, excluded_vals= [-1 - f_DG])
+# groups = improved_uniques(combine_lists(read_multi_csv(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"])),
+#                           const = f_DG, excluded_vals= [-1 - f_DG])
 
 # print(groups)
 
@@ -1690,18 +1690,18 @@ groups = improved_uniques(combine_lists(read_multi_csv(["first_run", "second_run
 
 # x = [v for v in groups.values() if v[1] < 3]
 
-groups3 = []
+# groups3 = []
 
-for v in groups.values():
-    for g in v:
-        if g[0] < 0:
-            groups3.append(g)
+# for v in groups.values():
+#     for g in v:
+#         if g[0] < 0:
+#             groups3.append(g)
 
-# print(groups3)
+# # print(groups3)
 
-#[v for v in groups.values() for g in v if g[0] < 3]
+# #[v for v in groups.values() for g in v if g[0] < 3]
 
-cluster_histogram(groups3,out_path= "zall_comp.png", bins = 2000, colors = colors)
+# cluster_histogram(groups3,out_path= "zall_comp.png", bins = 2000, colors = colors)
 # cluster_histogram(combine_lists(groups.values()),out_path= "zall.png", bins = 500, colors = colors)
 
 

@@ -16,25 +16,204 @@ sys.path.append("/home/coasr2026/CO_GANs_SCFT/running") # change to running path
 import run_scft
 from datetime import timedelta
 from datetime import datetime
+import re
+
 
 JobType = Enum("JobType", "SINGLE ARRAY")
 
+def init_template(text: str, replace: dict) -> str:
+    """ Replaces all key-value pairs in a provided string.=\n
+    text: The text to modify\n
+    replace: A dict containing keys to be replaced and
+    values to replace each key with\n
+    NOTE: If a key is present in a value, it could
+    potentially be overwritten!"""
+    for key, value in replace.items():
+        text = text.replace(key, value)
+
+    return text
+
 class Job:
+    """ Represents a Slurm job\n
+    job_id: The ID of this job\n
+    job_type: The type of this job, either JobType.SINGLE or JobType.ARRAY
+    status: The last-updated status of this job\n
+    template_path: An absolute path to the Slurm template to use when scheduling this job\n
+    param: The parameters to use to fill in the template\n
+    slurm_path: The path to the Slurm script to run (generated from template_path)\n
+    timeouts: How many times this job timed out\n
+    auto_reschedule: Whether this job should automatically reschedule itself with more time
+    when entering "TIMEOUT" Slurm status. If false, the program will end execution if a 
+    TIMEOUT occurs.\n
+    reschedule_add: How much time to add when rescheduling the job for a TIMEOUT, if
+    auto_reschedule is True. This should be a string formatted like "HH:MM:SS".
+    This will vary between jobs, but a general rule of thumb for this value is 1/4 of
+    the original time."""
     job_id: str
-    time_schedule: datetime
-    time_end: datetime
+    job_type: JobType
     status: str
+    template_path: str
+    param: dict
+    slurm_path: str
+    timeouts: int
+    auto_reschedule: bool
+    reschedule_add: str
 
-    def __init__(self, job_id, status):
-        self.job_id = job_id
-        self.time_schedule = datetime.now()
-        self.time_end = datetime(year=999)
-        self.status = status
+    def __init__(self, job_type: JobType, template_path: str, param: dict,
+                 slurm_path: str, auto_reschedule: bool, reschedule_add: str):
+        self.job_id = "UNSCHEDULED"
+        self.job_type = job_type
+        self.status = "UNSCHEDULED"
+        self.template_path = template_path
+        self.param = param
+        self.slurm_path = slurm_path
+        self.timeouts = 0
+        self.auto_reschedule = auto_reschedule
+        self.reschedule_add = reschedule_add
 
-    # def __check__():
-        
+    # @classmethod
+    # def from_dict()
 
-# class ArrayJob(Job):
+    def read_template(self):
+        """ Reads all template parameters (enclosed in "{}") from
+        this Job's template, and returns a list of all template parameters,
+        including their enclosing {} characters"""
+        print(f"Attempting to read template parameters at {self.template_path}...")
+        regex = r"(\{.*?\})"
+
+        with open(self.template_path, 'r') as f:
+            text = f.read()
+
+        params = re.findall(regex, text)
+
+        print("Done!")
+
+        return params
+
+    def write_template(self):
+        """ Writes """
+        print("Attempting to write template...")
+
+        params = self.read_template()
+
+        replacements = {}
+
+        print("Attempting to locate parameters...")
+
+        for p in params:
+            # convert template parameters (styled like {MY_PARAM}) to
+            # lowercase dict keys (styled like my_param)
+            p_target = p.strip("{}").lower()
+            # set each template parameter to its corresponding dict parameter
+            replacements[p] = self.template_param[p_target]
+
+        print("Done!")
+
+        with open(self.template_path, "r") as f:
+            text = f.read()
+
+        text = init_template(text, replacements)
+
+        with open(self.slurm_path, "w") as f:
+            f.write(text)
+
+        print(f"Wrote file to {self.slurm_path}")
+
+    def make_train_script(train_param: dict, main_param: dict):
+        print("Making train.sh script...")
+        slurm_param = train_param['slurm']
+
+        replacements = {
+            "{SLURM_NAME}": slurm_param['slurm_name'],
+            "{NAME}": main_param['name'],
+            "{LOG_PATH}": slurm_param['log_path'],
+            "{TIME}": slurm_param['time'],
+            "{TASKS}": slurm_param['ntasks'],
+            "{CPUS}": slurm_param['cpus'],
+            "{MEM}": slurm_param['mem'],
+            "{GRES}": slurm_param['gres'],
+            "{MAIL_TYPE}": slurm_param['mail_type'],
+            "{MAIL_USER}": slurm_param['mail_user'],
+            "{PARTITION}": slurm_param['partition'],
+            "{CO_GANS_PATH}": main_param['co_gans_path'],
+            "{ABS_PATH}": main_param['abs_path'],
+            "{BATCH_SIZE}": train_param['batch_size'],
+            "{LEARNING_RATE}": train_param['learning_rate']
+        }
+
+        with open((Path(main_param['co_gans_path']) / "CO_GANs_SCFT/running/auto_running/train_template.sh"), "r") as f:
+            text = f.read()
+
+        text = init_template(text, replacements)
+
+        with open((Path(main_param['abs_path']) / main_param['name'] / "train.sh"), "w") as f:
+            f.write(text)
+
+        print(f"Wrote file to {(Path(main_param['abs_path']) / main_param['name'] / 'train.sh')}")
+
+    def schedule(self):
+        command = ["sbatch", "--parsable", self.slurm_path]
+        result = subprocess.run(command, capture_output = True, text = True, check = True)
+    
+        # strip text to be safe
+        self.job_id = result.stdout.strip()
+        return self.job_id
+
+    def check(self):
+        """ Checks the current status of a specified Slurm job.
+            If the job's status is FAILED, NODE_FAIL, or OUT_OF_MEMORY,
+            reports it and ends the program. Otherwise, outputs the job's status.\n
+            job_id: The Slurm job to check."""
+        command = ["sacct", "--format=State", "--noheader", "-P", "-j", self.job_id]
+        result = subprocess.run(command, capture_output = True, text = True, check = True)
+    
+        code = result.stdout.splitlines()[0]
+    
+        # automatically exit if smth bad happens
+        if code == "FAILED":
+            print(f"Slurm job {self.job_id} ended with state FAILED!")
+            print("Ending process...")
+            sys.exit()
+    
+        if code == "NODE_FAIL":
+            print(f"Slurm job {self.job_id} ended with state NODE_FAIL!")
+            print("Ending process...")
+            sys.exit()
+    
+        if code == "OUT_OF_MEMORY":
+            print(f"Slurm job {self.job_id} ended with state OUT_OF_MEMORY!")
+            print("Ending process...")
+            sys.exit()
+    
+        return code
+
+    def wait_for_slurm_end(self, period = 120.0):
+        """ Periodically checks for this Slurm job to finish.
+        If the Slurm job's status becomes "FAILED", "TIMEOUT", "NODE_FAIL" or
+        "OUT_OF_MEMORY", terminates the program\n
+        This function is blocking and will not return execution until this job's
+        status becomes "COMPLETED" """
+        finished = False
+
+        while not finished:
+            code = self.slurm_check()
+            if code == "COMPLETED":
+                finished = True
+            if code == "TIMEOUT":
+                print(f"Slurm job {self.job_id} timed out!")
+                if self.auto_reschedule:
+                    print("Auto reschedule is ON!")
+                    print("Attempting to reschedule...")
+                    print(f"Addition: {self.reschedule_add}")
+                else:
+                    print("Auto reschedule is OFF!")
+                    print("Ending process...")
+                    sys.exit()
+
+            time.sleep(period)
+
+class BranchedJob(Job):
+    pass
 
 
 def str_to_timedelta(time: str):
@@ -48,13 +227,26 @@ def str_to_timedelta(time: str):
 
 def timedelta_to_str(delta: timedelta):
     """ Converts a datetime.timedelta object into a string
-    formatted like "HH:MM:SS\n
+    formatted like "HH:MM:SS"\n
     delta: A timedelta object"""
     h = int(delta.total_seconds() // 3600)
     m = int((delta.total_seconds() % 3600) // 60)
     s = int(delta.total_seconds() % 60)
 
     return f"{h:02d}:{m:02d}:{s:02d}"
+
+def add_time_strings(time_1: str, time_2: str):
+    """ Converts two time strings to timedelta objects using str_to_timedelta(),
+    adds them, then converts the timedelta back into a string and returns it.
+    Each string must be formatted like "HH:MM:SS"\n
+    time_1: The first time to add, in string "HH:MM:SS" format\n
+    time_2: The second time to add, in string "HH:MM:SS" format"""
+    delt1 = str_to_timedelta(time_1)
+    delt2 = str_to_timedelta(time_2)
+
+    total = delt1 + delt2
+
+    return timedelta_to_str(total)
 
 def run_python(path: str, args: list):
     command = ["python", path].extend(args)
@@ -69,51 +261,7 @@ def run_slurm(path: str):
     # strip text to be safe
     return result.stdout.strip()
 
-def slurm_check(job_id: str):
-    """ Checks the current status of a specified Slurm job.
-    If the job's status is FAILED, NODE_FAIL, or OUT_OF_MEMORY,
-    reports it and ends the program. Otherwise, outputs the job's status.\n
-    job_id: The Slurm job to check."""
-    command = ["sacct", "--format=State", "--noheader", "-P", "-j", job_id]
-    result = subprocess.run(command, capture_output = True, text = True, check = True)
 
-    code = result.stdout.splitlines()[0]
-
-    # automatically exit if smth bad happens
-    if code == "FAILED":
-        print(f"Slurm job {job_id} ended with state FAILED!")
-        print("Ending process...")
-        sys.exit()
-
-    if code == "NODE_FAIL":
-        print(f"Slurm job {job_id} ended with state NODE_FAIL!")
-        print("Ending process...")
-        sys.exit()
-
-    if code == "OUT_OF_MEMORY":
-        print(f"Slurm job {job_id} ended with state OUT_OF_MEMORY!")
-        print("Ending process...")
-        sys.exit()
-
-    return code
-
-
-def wait_for_slurm_end(job_id: str, period = 120.0):
-    """ Periodically checks for a Slurm job to finish.
-    If the Slurm job's status becomes "FAILED", "TIMEOUT", "NODE_FAIL" or
-    "OUT_OF_MEMORY", terminates the program"""
-    finished = False
-
-    while not finished:
-        code = slurm_check(job_id)
-        if code == "COMPLETED":
-            finished = True
-        if code == "TIMEOUT":
-            print(f"Slurm job {job_id} timed out!")
-            print("Ending process...")
-            sys.exit()
-
-        time.sleep(period)
 
 def scft_array_timeout_check(dir: str):
     """ Taken from print_dirs.py """
@@ -205,18 +353,6 @@ def load_params(param_path: str):
         print("No parameter file detected.")
         print("Ending program...")
         sys.exit()
-
-def init_template(text: str, replace: dict) -> str:
-    """ Replaces all key-value pairs in a provided string.=\n
-    text: The text to modify\n
-    replace: A dict containing keys to be replaced and
-    values to replace each key with\n
-    NOTE: If a key is present in a value, it could
-    potentially be overwritten!"""
-    for key, value in replace.items():
-        text = text.replace(key, value)
-
-    return text
 
 def make_train_script(train_param: dict, main_param: dict):
     print("Making train.sh script...")
@@ -393,5 +529,6 @@ def main():
 
     # for sec in unfinished:
         
+# print("{MY_PARAMETER}".strip("{}").lower())
 
-main()
+# main()

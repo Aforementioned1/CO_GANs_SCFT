@@ -9,11 +9,11 @@
     "data_path": "run/data.pt",
     "train": {
         "slurm": {
-            "name": "CO_GAN_training",
+            "slurm_name": "CO_GAN_training",
             "log_path": "/users/0/mumma026/CO_GANs_SCFT/running",
             "time": "01:00:00",
             "ntasks": "1",
-            "cpus_per_task": "2",
+            "cpus": "2",
             "mem": "6g",
             "gres": "gpu:1",
             "mail_type": "ALL",
@@ -26,11 +26,11 @@
     },
     "gen": {
         "slurm": {
-            "name": "CO_gen",
+            "slurm_name": "CO_gen",
             "log_path": "/users/0/mumma026/CO_GANs_SCFT/running",
             "time": "00:30:00",
             "ntasks": "1",
-            "cpus_per_task": "1",
+            "cpus": "1",
             "mem": "1g",
             "mail_type": "ALL",
             "mail_user": "mumma026@umn.edu,holm0994@umn.edu",
@@ -39,11 +39,11 @@
     },
     "scft_1": {
         "slurm": {
-            "name": "CO_SCFT_1",
+            "slurm_name": "CO_SCFT_1",
             "log_path": "/users/0/mumma026/CO_GANs_SCFT/running",
             "time": "01:00:00",
             "ntasks": "1",
-            "cpus_per_task": "1",
+            "cpus": "1",
             "mem": "280m",
             "mail_type": "ALL",
             "mail_user": "mumma026@umn.edu,holm0994@umn.edu",
