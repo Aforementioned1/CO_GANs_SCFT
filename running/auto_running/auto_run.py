@@ -1,5 +1,6 @@
 """ This program is intended to be able to moderate and automate an entire
-run through, from GAN training to SCFT step 2."""
+run through, from GAN training to SCFT step 2.\n
+Example usage: python auto_run.py log.txt param.json param_custom.json"""
 
 """ FOR NOW, THIS ASSUMES THAT run_env.sh CONTAINS YOUR JSON PARAMETER'S "name" values as $RUN_NAME!!!!!! """
 
@@ -106,7 +107,7 @@ class Job:
     reschedule_add: str
 
     def __init__(self, template_path: str, param: dict,
-                 slurm_path: str, auto_reschedule: bool, reschedule_add: str):
+                 slurm_path: str, auto_reschedule: bool):
         self.job_id = "UNSCHEDULED"
         self.status = "UNSCHEDULED"
         self.template_path = template_path
@@ -114,7 +115,7 @@ class Job:
         self.slurm_path = slurm_path
         self.timeouts = 0
         self.auto_reschedule = auto_reschedule
-        self.reschedule_add = reschedule_add
+        self.reschedule_add = param['time_inc']
 
     def print_attrs(self, param = False):
         """ This is a debug method that prints all of this
@@ -219,6 +220,7 @@ class Job:
         add = self.reschedule_add
         curr = self.param['time']
         total = add_time_strings(curr, add)
+        logger.warning("Adding Slurm time for rescheduling!")
         logger.warning(f"Current: {curr} | Addition: {add} | Total: {total}")
         logger.warning(f"Setting parameter time config to be {total}...")
         self.param['time'] = total
@@ -418,6 +420,7 @@ def scft_callback(job: BranchedJob):
     job.job_ids = []
     job.statuses = []
 
+    # make sure to increase time!!!
     job.add_reschedule_time()
 
     # schedule and wait
@@ -506,13 +509,157 @@ def scft_array_timeout_check(dir: str):
 
     return out_strs
 
+def deep_merge(dict_1: dict, dict_2: dict, recursive = False):
+    """ Merges two dicts. Any individual keys of dict_1 and dict_2 are preserved,
+    but shared keys preserve only the value of dict_2. Unlike the built-in Python merge (|)
+    operator, this function finds instances of shared keys amongst the two dicts where both
+    values are nested dicts. Instead of only preserving the value of dict_2, as it would with
+    the merge operator, the program merges the two dicts. If recursive is True, the program
+    searches both nested dicts for any duplicate keys with even further nested dicts, properly
+    combining them until the dicts have no more shared dict keys.\n
+    dict_1: The dict to merge two\n
+    dict_2: The dict to merge with dict_1\n
+    recursive: Whether to recursively search for further nested dicts"""
+    out = dict_1.copy()
+
+    for k, v in dict_2.items():
+        if k in dict_1:
+            if isinstance(v, dict) and isinstance(dict_1[k], dict):
+                if recursive:
+                    deeper_merge = False
+
+                    for k2, v2 in v.items():
+                        # print(f"First {v2}")
+                        if isinstance(v2, dict):
+                            deeper_merge = True
+                    for k2, v2 in dict_1[k].items():
+                        # print(f"Second {v2}")
+                        if isinstance(v2, dict):
+                            deeper_merge = True
+                    print(deeper_merge)
+                    if deeper_merge:
+                        out[k] = deep_merge(dict_1[k], v, recursive)
+                    else:
+                        print(f"one: {dict_1[k]}")
+                        print(f"two: {v}")
+                        out[k] = v | out[k]
+                else:
+                    out[k] = v | out[k]
+                # out[k] = deep_merge(out[k], v)
+            else:
+                out[k] = v
+
+### scft_helpers.py functions
+
+def prep_scft_1(run_path: Path, co_gans_path: Path, param: dict):
+    """ Originally from scft_helpers.py (name PREP_SCFT_1, number 0)\n
+        Prepares subdirectories to be run through SCFT step 1 using a directory
+        of GAN guesses\n
+        run_path: The path to a directory containing the directory gan_guesses
+        (with 5000 guesses guess_1.rf-guess_5000.rf)\n
+        co_gans_path: The path to the CO_GANs_SCFT repo clone\n
+        param: A dictionary containing parameters. This function requires a
+        nested dictionary 'scft_1' that contains keys 'param_path', 'command_path',
+        and 'run_path'. These should be relative paths to param, command, and run files,
+        respectively, from co_gans_path"""
+    logger.info("[HELPER] PREP_SCFT_1 (0)")
+    # prepare files
+    run_scft.prepare_files(in_path = str(run_path / "gan_guessees"),
+            out_path = str(run_path / "scft_1"),
+            out_name = "rgrid.rf",
+            param_path = str(co_gans_path / param['scft_1']['param_path']),
+            command_path = str(co_gans_path / param['scft_1']['command_path']),
+            run_path =  str(co_gans_path / param['scft_1']['run_path']),
+            debug = False)
+
+def scft_1_to_csv(run_path: Path):
+    """ Originally from scft_helpers.py (name SCFT_1_TO_CSV, number 1)\n
+        Collects and writes CSV convergence data from the directory scft_1
+        run_path: The path to a directory containing the directory scft_1\n"""
+    logger.info("[HELPER] SCFT_1_TO_CSV (1)")
+    # combine data to CSV file
+    run_scft.to_csv_num(dir_path = str(run_path / "scft_1"),
+            num_start = 1,
+            num_end = 5000,
+            output = str(run_path / "data/scft_1.csv"),
+            debug = False)
+
+def scft_1_conv(run_path: Path, param: dict):
+    """ Originally from scft_helpers.py (name SCFT_1_CONV, number 2)\n
+        Prints SCFT step 1 convergence data with optional detailed information\n
+        run_path: The path to a directory containing the directory scft_1\n
+        param: A dictionary containing parameters. This function requires a
+        nested dictionary 'scft_1' that contains the key 'detailed_conv', which
+        should be a boolean value."""
+    logger.info("[HELPER] SCFT_1_CONV (2)")
+    data = {
+        "suc":  0, # all in group SUC
+        "conv": 0, # SUC_CONV
+        "fin":  0, # SUC_MAX_ITER and SUC_NO_CONV
+        "iter": 0, # SUC_MAX_ITER
+        "nocv": 0, # SUC_NO_CONV
+        "warn": 0, # all in group WARN
+        "log":  0, # WARN_NO_LOG
+        "noit": 0, # WARN_NO_ITER
+        "unf":  0, # WARN_NOT_FIN
+        "err":  0  # ERR_NO_DIR
+    }
+
+    for d in sorted((run_path / "scft_1").iterdir(), key = lambda d: int(d.stem)):
+        state = run_scft.calc_state(d.absolute(), debug = False)
+
+        match state:
+            # group SUC
+            case "SUC_CONV":
+                data["suc"] += 1
+                data["conv"] += 1 
+            case "SUC_MAX_ITER":
+                data["suc"] += 1
+                data["fin"] += 1
+                data["iter"] += 1
+            case "SUC_NO_CONV":
+                data["suc"] += 1
+                data["fin"] += 1
+                data["nocv"] += 1
+            # group WARN
+            case "WARN_NO_LOG":
+                data["warn"] += 1
+                data["log"] += 1
+            case "WARN_NO_ITER":
+                data["warn"] += 1
+                data["noit"] += 1 
+            case "WARN_NOT_FIN":
+                data["warn"] += 1
+                data["unf"] += 1 
+            # group ERR
+            case "ERR_NO_DIR":
+                data["err"] += 1
+    
+        # SUC
+        logger.info(f"Finished (total):           {data['suc']}")
+        logger.info.info(f"Finished (converged):       {data["conv"]}")
+        print(f"Finished (not converged):   {data["fin"]}")
+        if param['scft_1']['detailed_conv']:
+            logger.info(f"Finished (max iterations):  {data['iter']}")
+            logger.info(f"Finished (no convergence):  {data['nocv']}")
+    
+        # WARN
+        logger.info(f"Unfinished (total):         {data['warn']}")
+        if param['scft_1']['detailed_conv']:
+            logger.info(f"Unfinished (no log):        {data['log']}")
+            logger.info(f"Unfinished (no iterations): {data['noit']}")
+            logger.info(f"Unfinished (iterations):    {data['unf']}")
+    
+        # ERR
+        logger.info(f"Error (no directory):        {data['err']}")
+
 def load_params(paths: list[str]):
     """ Attempts to load JSON parameters from all file paths in paths.
     This can be used to easily change small amounts of JSON parameters while
     keeping the original defaults intact\n
     NOTE: Any duplicate parameters in later files will automatically override
     existing duplicates from earlier files\n
-    paths: A list of all paths to read. This program uses sys.argv[1:] by default"""
+    paths: A list of all paths to read. This program uses sys.argv[2:] by default"""
     # sys.argv[1:]
     if len(paths) != 0:
         logger.info(f"{len(paths)} parameter files detected.")
@@ -526,7 +673,7 @@ def load_params(paths: list[str]):
         param = params[0]
 
         for p in params:
-            param | p
+            param = deep_merge(param, p, True)
 
         return param
 
@@ -540,7 +687,7 @@ def main():
     # load JSON parameters
     # using sys.argv for now
 
-    logging.basicConfig(level = logging.INFO, filename = "test.log", format='%(asctime)s [%(levelname)s] %(message)s')
+    logging.basicConfig(level = logging.INFO, filename = sys.argv[1], format='%(asctime)s [%(levelname)s] %(message)s')
 
     param = load_params(sys.argv[2:])
 
@@ -563,18 +710,17 @@ def main():
     # copy 
     shutil.copy(param['data_path'], str(run_path / "data.pt"))
 
+    # init gan train job object
     train_job = Job(co_gans_path / "CO_GANs_SCFT/running/auto_running/train_template.sh",
-                    param['train']['slurm'] | param['train'] | main_param, main_paths['run_path'] / "train.sh",
-                    True, param['train']['slurm']['time_inc'])
+                    param['train']['slurm'] | param['train'] | main_param,
+                    run_path / "train.sh", True)
 
+    # init script file with parameters
     train_job.create_script()
 
-    # make train.sh script
-    make_train_script(train_param = param['train'], main_param = main_param)
-
-    # schedule train script and wait for it to end
-    job_id = run_slurm(str(run_path / "train.sh"))
-    wait_for_slurm_end(job_id = job_id)
+    # run and wait
+    train_job.schedule()
+    train_job.wait_for_slurm_end()
 
     # find latest model file
     time_sorted_models = sorted([f for f in (run_path / "model").iterdir() if f.is_file()], key = lambda x: x.stat().st_mtime)
@@ -592,15 +738,25 @@ def main():
         sys.exit()
 
     logger.info(f"Found model {target_model}!")
-    make_gen_script(param['gen'], main_param, target_model)
-    logger.info(f"Attempting to generate guesses...")
+    
+    logger.info("Attempting to generate guesses...")
+    # init generation job object
+    gen_job = Job(co_gans_path / "CO_GANs_SCFT/running/auto_running/generate_template.sh",
+                  param['gen']['slurm'] | param['gen'] | main_param | {"gweights": target_model},
+                  run_path / "generate.sh", True)
 
-    # schedule generate script and wait for it to end
-    job_id = run_slurm(str(run_path / "generate.sh"))
-    wait_for_slurm_end(job_id = job_id)
+    # init script file with parameters
+    gen_job.create_script()
+
+    # schedule and wait
+    gen_job.schedule()
+    gen_job.wait_for_slurm_end()
+
+    logger.info("Successfully generated guesses!")
 
     # move data.pt and model if enabled
     if main_param['move']:
+        logger.info("Moving is enabled!!!")
         logger.info(f"Making directories for move path at {move_path}")
         move_path.mkdir(parents = True, exist_ok = True)
         logger.info(f"Moving data.pt ({run_path / 'data.pt'}) to {move_path}")
@@ -608,26 +764,38 @@ def main():
         logger.info(f"Moving model ({run_path / 'model'}) to {move_path}")
         shutil.move(run_path / "model", move_path)
 
+    # # NOTE: need to make scft example param file (NOT DONE)
+    # run_python(co_gans_path / "CO_GANs_SCFT/running/scft_example.py", ["-p", (run_path / "example_param.json"), "-s", "PREP_SCFT_1"])
+    
     # initialize SCFT step 1 directories
-    # NOTE: need to make scft example param file (NOT DONE)
-    run_python(co_gans_path / "CO_GANs_SCFT/running/scft_example.py", ["-p", (run_path / "example_param.json"), "-s", "PREP_SCFT_1"])
-
+    prep_scft_1(run_path, co_gans_path, param)
+    
     # move gan_guesses if enabled
     if main_param['move']:
         logger.info(f"Moving gan_guesses ({run_path / 'gan_guesses'}) to {move_path}")
         shutil.move(run_path / "gan_guesses", move_path)
 
+    # initialize SCFT 1 job object
+    scft_1_job = BranchedJob(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_template.sh",
+                             param['scft_1']['slurm'] | param['scft_1'] | main_param,
+                             run_path / "scft_multi.sh", True)
 
-    # make scft_multi.sh script
-    make_scft_1_script(param['scft_1'], main_param)
+    # bind the callback function
+    scft_1_job.callback = scft_callback
 
-    # schedule generate script and wait for it to end
-    job_id = run_slurm(str(run_path / "scft_multi.sh"))
-    wait_for_slurm_end(job_id = job_id)
+    # init script (no multi)
+    scft_1_job.create_script()
 
-    # find ones that didn't finish
-    unfinished = scft_array_timeout_check("scft_1")
+    # schedule and wait
+    # as this uses the scft_callback function, it will continue rescheduling
+    # unfinished calculations with longer times until none are left
+    scft_1_job.schedule()
+    scft_1_job.wait_for_slurm_end()
 
-    # for sec in unfinished:
+    # collect csv data
+    scft_1_to_csv(run_path)
+
+    # get convergence info
+    scft_1_conv(run_path, param)
 
 # main()

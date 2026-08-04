@@ -301,7 +301,10 @@ def prepare_files_second(in_path: str, dir_names: list[str], out_path: str,
             print(in_path, "does not exist or is not a directory! Skipping...")
 
 def fix_w_basis(in_path: str, out_path: str, debug = False):
-    """ Fixes w.bf (W basis) files outputted from the first pass of SCFT,
+    """ NOTE: This function is deprecated. save_w_basis() accomplishes the
+        same things but is more consistent and safer. It should be possible
+        to run it on the same file twice without creating issues.
+        Fixes w.bf (W basis) files outputted from the first pass of SCFT,
         by:
             -changing the crystal system from orthorhombic to triclinic\n
             -chaning the number of cell parameters from 3 to 6\n
@@ -389,49 +392,6 @@ def save_w_basis(in_dir: str, names: list[str], sub_name = "w.bf", debug = False
 
         # can always make it 17000
         lines[14] = "             17000\n"
-
-        if debug:
-            print("Final line 5:", lines[4])
-            print("Final line 7:", lines[6])
-            print("Final line 9:", lines[8])
-            print("Final line 15:", lines[13])
-
-        with open((in_path / n / sub_name).absolute(), "w") as f:
-            f.writelines(lines)
-
-def add_return(in_dir: str, names: list[str], sub_name = "w.bf", debug = False):
-    """ Attempts to save w.bf (W basis) files that have been accidentally run through fix_w_basis()
-        multiple times.\n
-        in_dir: A path to a directory with subdirectories names to attempt to save\n
-        names: A list of names to attempt to save
-        sub_name: The name of w.bf file to look for. Defaults to "w.bf". An example
-        full path would be in_dir / names[0] / sub_name\n
-        debug: Whether to print extra information for debugging\n"""
-    # if debug:
-    #     print("Debug mode ON for fix_w_basis")
-    #     print("In path:", in_path)
-    #     print("Names:", names)
-
-    in_path = Path(in_dir)
-
-    for n in names:
-        with open((in_path / n / sub_name).absolute(), "r") as f:
-            # read as lines for easier processing
-            lines = f.readlines()
-
-        if debug:
-            print("Initial line 5:", lines[4])
-            print("Initial line 7:", lines[6])
-            print("Initial line 9:", lines[8])
-            print("Initial line 15:", lines[13])
-
-        lines[4] += "\n"
-
-        lines[6] += "\n"
-
-        lines[8] += "\n"
-
-        lines[14] = "\n"
 
         if debug:
             print("Final line 5:", lines[4])

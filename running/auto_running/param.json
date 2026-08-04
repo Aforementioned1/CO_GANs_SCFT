@@ -47,10 +47,14 @@
             "mem": "280m",
             "mail_type": "ALL",
             "mail_user": "mumma026@umn.edu,holm0994@umn.edu",
-            "array": "1-1000",
+            "array": ["1-1000"],
             "time_inc": "00:15:00"
         },
         "sections": 1000,
-        "job_dir_name": "scft_1"
+        "job_dir_name": "scft_1",
+        "param_path": "running/first/param",
+        "command_path": "running/first/command",
+        "run_path": "running/first/run",
+        "detailed_conv": true
     }
 }
