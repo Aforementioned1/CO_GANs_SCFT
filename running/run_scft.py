@@ -1692,10 +1692,10 @@ def copy_files(pre_path: str, files: list[tuple[str, str]], temp_dir: str, name_
 
 # # colors = dynamic_hex_rainbow(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"], 0.5, 1.0, max_clamp = 1.0)
 
-groups = improved_uniques(combine_lists(read_multi_csv(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"])),
-                          const = f_DG, excluded_vals= [-1 - f_DG])
+# groups = improved_uniques(combine_lists(read_multi_csv(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"])),
+#                           const = f_DG, excluded_vals= [-1 - f_DG])
 
-print(len(get_first_in_cluster(groups)))
+# print(len(get_first_in_cluster(groups)))
 
 # 
 # print(groups)

@@ -36,7 +36,7 @@ def init_template(text: str, replace: dict) -> str:
     return text
 
 def init_template_file(in_path: str, out_path: str, replace: dict):
-    print(f"Attempting to replace template at {in_path}...")
+    logger.info(f"Attempting to replace template at {in_path}...")
 
     with open(in_path, "r") as f:
         text = f.read()
@@ -46,7 +46,7 @@ def init_template_file(in_path: str, out_path: str, replace: dict):
     with open(out_path, "w") as f:
         f.write(repl)
 
-    print(f"Wrote file to {out_path}!")
+    logger.info(f"Wrote file to {out_path}!")
 
 def str_to_timedelta(time: str):
     """ Converts a string formatted like "HH:MM:SS" to a
@@ -120,19 +120,19 @@ class Job:
         """ This is a debug method that prints all of this
         object's instance variables\n
         param: Whether to print the param dict"""
-        print(f"Job ID: {self.job_id} | Status: {self.status}")
-        print(f"Template Path: {self.template_path}")
-        print(f"Slurm Path: {self.slurm_path}")
-        print(f"Timeouts: {self.timeouts}")
-        print(f"AutoRes: {self.auto_reschedule} | ResAdd: {self.reschedule_add}")
+        logger.info(f"Job ID: {self.job_id} | Status: {self.status}")
+        logger.info(f"Template Path: {self.template_path}")
+        logger.info(f"Slurm Path: {self.slurm_path}")
+        logger.info(f"Timeouts: {self.timeouts}")
+        logger.info(f"AutoRes: {self.auto_reschedule} | ResAdd: {self.reschedule_add}")
         if param:
-            print(f"Param: {self.param}")
+            logger.info(f"Param: {self.param}")
 
     def read_template(self):
         """ Reads all template parameters (enclosed in "{}") from
         this Job's template, and returns a list of all template parameters,
         including their enclosing {} characters"""
-        print(f"Attempting to read template parameters at {self.template_path}...")
+        logger.info(f"Attempting to read template parameters at {self.template_path}...")
         regex = r"(\{.*?\})"
 
         with open(self.template_path, 'r') as f:
@@ -140,20 +140,20 @@ class Job:
 
         params = list(set(re.findall(regex, text)))
 
-        print("Done!")
+        logger.info("Done!")
 
         return params
 
     def create_script(self):
         """ Writes a script filling in the template parameters of this
         Job's template_path, writing the script to this Job's slurm_path"""
-        print("Attempting to write template...")
+        logger.info("Attempting to write template...")
 
         params = self.read_template()
 
         replacements = {}
 
-        print("Attempting to locate parameters...")
+        logger.info("Attempting to locate parameters...")
 
         for p in params:
             if "\\" in p:
@@ -166,31 +166,21 @@ class Job:
             # set each template parameter to its corresponding dict parameter
             replacements[p] = self.param[p_target]
 
-        print("Done!")
+        logger.info("Done!")
 
         init_template_file(self.template_path, self.slurm_path, replacements)
 
-        # with open(self.template_path, "r") as f:
-        #     text = f.read()
-
-        # text = init_template(text, replacements)
-
-        # with open(self.slurm_path, "w") as f:
-        #     f.write(text)
-
-        # print(f"Wrote file to {self.slurm_path}")
-
     def schedule(self):
         """ Schedules this job to run """
-        print("Attempting to schedule job...")
+        logger.info("Attempting to schedule job...")
         command = ["sbatch", "--parsable", self.slurm_path]
         result = subprocess.run(command, capture_output = True, text = True, check = True)
 
-        print("Done!")
+        logger.info("Done!")
     
         # strip text to be safe
         self.job_id = result.stdout.strip()
-        print(f"Result: {result.stdout} | Job ID: {self.job_id}")
+        logger.info(f"Result: {result.stdout} | Job ID: {self.job_id}")
 
         return self.job_id
 
@@ -198,28 +188,28 @@ class Job:
         """ Checks the current status of a specified Slurm job.
             If the job's status is FAILED, NODE_FAIL, or OUT_OF_MEMORY,
             reports it and ends the program. Otherwise, outputs the job's status."""
-        print(f"Attempting to view job {self.job_id}'s status...")
+        logger.info(f"Attempting to view job {self.job_id}'s status...")
         
         command = ["sacct", "--format=State", "--noheader", "-P", "-j", self.job_id]
         result = subprocess.run(command, capture_output = True, text = True, check = True)
     
         code = result.stdout.splitlines()[0]
-        print(f"Job {self.job_id}'s code: {code}")
+        logger.info(f"Job {self.job_id}'s code: {code}")
     
         # automatically exit if smth bad happens
         if code == "FAILED":
-            print(f"Slurm job {self.job_id} ended with state FAILED!")
-            print("Ending process...")
+            logger.critical(f"Slurm job {self.job_id} ended with state FAILED!")
+            logger.critical("Ending process...")
             sys.exit()
     
         if code == "NODE_FAIL":
-            print(f"Slurm job {self.job_id} ended with state NODE_FAIL!")
-            print("Ending process...")
+            logger.critical(f"Slurm job {self.job_id} ended with state NODE_FAIL!")
+            logger.critical("Ending process...")
             sys.exit()
     
         if code == "OUT_OF_MEMORY":
-            print(f"Slurm job {self.job_id} ended with state OUT_OF_MEMORY!")
-            print("Ending process...")
+            logger.critical(f"Slurm job {self.job_id} ended with state OUT_OF_MEMORY!")
+            logger.critical("Ending process...")
             sys.exit()
     
         return code
@@ -229,13 +219,13 @@ class Job:
         add = self.reschedule_add
         curr = self.param['time']
         total = add_time_strings(curr, add)
-        print(f"Current: {curr} | Addition: {add} | Total: {total}")
-        print(f"Setting parameter time config to be {total}...")
+        logger.warning(f"Current: {curr} | Addition: {add} | Total: {total}")
+        logger.warning(f"Setting parameter time config to be {total}...")
         self.param['time'] = total
-        print("Done!")
-        print("Overwriting Slurm script...")
+        logger.warning("Done!")
+        logger.warning("Overwriting Slurm script...")
         self.create_script()
-        print("Done!")
+        logger.warning("Done!")
 
     def wait_for_slurm_end(self, period = 120.0):
         """ Periodically checks for this Slurm job to finish.
@@ -248,7 +238,7 @@ class Job:
         timeout\n
         period: The period between Slurm checks, in seconds. Defaults to 120s"""
         if self.job_id == "UNSCHEDULED":
-            print("This job has not been scheduled yet! Returning...")
+            logger.error("This job has not been scheduled yet! Returning...")
             return
 
         finished = False
@@ -258,17 +248,17 @@ class Job:
             if code == "COMPLETED":
                 finished = True
             if code == "TIMEOUT":
-                print(f"Slurm job {self.job_id} timed out!")
+                logger.warning(f"Slurm job {self.job_id} timed out!")
                 if self.auto_reschedule:
-                    print("Auto reschedule is ON!")
-                    print("Attempting to reschedule...")
+                    logger.info("Auto reschedule is ON!")
+                    logger.info("Attempting to reschedule...")
                     self.timeouts += 1
                     self.add_reschedule_time()
                     self.schedule()
                     self.wait_for_slurm_end()
                 else:
-                    print("Auto reschedule is OFF!")
-                    print("Ending process...")
+                    logger.critical("Auto reschedule is OFF!")
+                    logger.critical("Ending process...")
                     sys.exit()
 
             time.sleep(period)
@@ -281,38 +271,38 @@ class BranchedJob(Job):
     list of Slurm array strings to use."""
     job_ids = []
     statuses = []
-    callback = lambda self: print("No specified callback. Continuing program...")
+    callback = lambda self: logger.info("No specified callback. Continuing program...")
 
     def print_attrs(self, param=False):
-        print(f"Job IDs: {self.job_ids}")
-        print(f"Statuses: {self.statuses}")
+        logger.info(f"Job IDs: {self.job_ids}")
+        logger.info(f"Statuses: {self.statuses}")
         super().print_attrs(param)
 
     def schedule(self):
         """ Schedules a job for all of the items in the "array" key """
         for i, a in enumerate(self.param['array']):
-            print(f"Attempting to schedule job {i}...")
-            print(f"Prepping specific template...")
+            logger.info(f"Attempting to schedule job {i}...")
+            logger.info(f"Prepping specific template...")
             init_template_file(f"{self.slurm_path.replace('.sh', '')}_no_array.sh", f"{self.slurm_path.replace('.sh', '')}_{i}.sh", {"{ARRAY}": a})
-            print("Done!")
+            logger.info("Done!")
 
             command = ["sbatch", "--parsable", f"{self.slurm_path.replace('.sh', '')}_{i}.sh"]
             result = subprocess.run(command, capture_output = True, text = True, check = True)
 
-            print("Done!")
+            logger.info("Done!")
         
             # strip text to be safe
             self.job_ids.append(result.stdout.strip())
-            print(f"Result: {result.stdout} | Job ID: {self.job_id}")
+            logger.info(f"Result: {result.stdout} | Job ID: {self.job_id}")
 
-        print(f"Scheduled {len(self.param['array'])} job(s) for all arrays!")
+        logger.info(f"Scheduled {len(self.param['array'])} job(s) for all arrays!")
 
         return self.job_ids
 
     def create_script(self):
         """ Writes 
         Excludes the parameter "array" """
-        print("Attempting to write template...")
+        logger.info("Attempting to write template...")
 
         params = self.read_template()
         # remove array
@@ -320,7 +310,7 @@ class BranchedJob(Job):
 
         replacements = {}
 
-        print("Attempting to locate parameters...")
+        logger.info("Attempting to locate parameters...")
 
         for p in params:
             if "\\" in p:
@@ -333,32 +323,22 @@ class BranchedJob(Job):
             # set each template parameter to its corresponding dict parameter
             replacements[p] = self.param[p_target]
 
-        print("Done!")
+        logger.info("Done!")
 
         init_template_file(self.template_path, f"{self.slurm_path.replace('.sh', '')}_no_array.sh", replacements)
-
-        # with open(self.template_path, "r") as f:
-        #     text = f.read()
-
-        # text = init_template(text, replacements)
-
-        # with open(self.slurm_path + "_no_array", "w") as f:
-        #     f.write(text)
-
-        # print(f"Wrote file to {self.slurm_path}_no_array")
 
     def check(self):
         """ Checks the current status of a specified Slurm job.
             If the job's status is FAILED, NODE_FAIL, or OUT_OF_MEMORY,
             reports it and ends the program. Otherwise, outputs the job's status."""
         for i, j in enumerate(self.job_ids):
-            print(f"Attempting to view job {j} (branch index {i})'s status...")
+            logger.info(f"Attempting to view job {j} (branch index {i})'s status...")
 
             command = ["sacct", "--format=State", "--noheader", "-P", "-j", j]
             result = subprocess.run(command, capture_output = True, text = True, check = True)
         
             code = result.stdout.splitlines()[0]
-            print(f"Job {j} (branch index {i})'s code: {code}")
+            logger.info(f"Job {j} (branch index {i})'s code: {code}")
 
             # make sure to append it instead of setting the
             # value if the index doesnt exist yet
@@ -367,23 +347,23 @@ class BranchedJob(Job):
             else:
                 self.statuses.append(code)
                 if not (0 <= i < len(self.statuses)):
-                    print(f"Warning: Code {code} not added to index {i} of statuses (job {j}, branch index {i}).")
-            print(f"Added code {code} to statuses!")
+                    logger.warning(f"Code {code} not added to index {i} of statuses (job {j}, branch index {i}).")
+            logger.info(f"Added code {code} to statuses!")
         
             # automatically exit if smth bad happens
             if code == "FAILED":
-                print(f"Slurm job {j} (branch index {i}) ended with state FAILED!")
-                print("Ending process...")
+                logger.critical(f"Slurm job {j} (branch index {i}) ended with state FAILED!")
+                logger.critical("Ending process...")
                 sys.exit()
         
             if code == "NODE_FAIL":
-                print(f"Slurm job {j} (branch index {i}) ended with state NODE_FAIL!")
-                print("Ending process...")
+                logger.critical(f"Slurm job {j} (branch index {i}) ended with state NODE_FAIL!")
+                logger.critical("Ending process...")
                 sys.exit()
         
             if code == "OUT_OF_MEMORY":
-                print(f"Slurm job {j} (branch index {i}) ended with state OUT_OF_MEMORY!")
-                print("Ending process...")
+                logger.critical(f"Slurm job {j} (branch index {i}) ended with state OUT_OF_MEMORY!")
+                logger.critical("Ending process...")
                 sys.exit()
         
         return self.statuses
@@ -478,11 +458,11 @@ def scft_array_timeout_check(dir: str):
 
     for d in sorted(target_dir.iterdir(), key = lambda d: int(d.stem) if num else d):
         if dir_amt >= groups:
-            print(f"DIR AMT reached! (dir_amt: {dir_amt}, groups: {groups})")
+            logger.info(f"DIR AMT reached! (dir_amt: {dir_amt}, groups: {groups})")
             if len(out_str) > 1:
                 out_str = out_str.rstrip(",")
             if debug:
-                print(out_str + "\n")
+                logger.debug(out_str + "\n")
             out_strs.append(out_str)
             total_dirs += dir_amt
             dir_amt = 0
@@ -493,7 +473,7 @@ def scft_array_timeout_check(dir: str):
 
                 state = run_scft.get_state_cat(str(d), debug = debug)
                 if debug:
-                    print(f"{d.name}'s state is: {state}")
+                    logger.debug(f"{d.name}'s state is: {state}")
                 
                 # only add if calc is not done/has not finished
                 # also exclude ERR values as those likely hint at larger issues and should NOT be run
@@ -512,7 +492,7 @@ def scft_array_timeout_check(dir: str):
 
 
         else:
-            print(f"{d.name} is not a directory!")
+            logger.error(f"{d.name} is not a directory!")
 
     out_strs.append(out_str.rstrip(","))
     total_dirs += dir_amt
@@ -521,8 +501,8 @@ def scft_array_timeout_check(dir: str):
         out_str = out_str.rstrip(",")
 
     for string in out_strs:
-        print(string)
-    print(f"Final directory amount: {dir_amt}\nTotal directory amount: {total_dirs}")
+        logger.info(string)
+    logger.info(f"Final directory amount: {dir_amt}\nTotal directory amount: {total_dirs}")
 
     return out_strs
 
@@ -535,11 +515,11 @@ def load_params(paths: list[str]):
     paths: A list of all paths to read. This program uses sys.argv[1:] by default"""
     # sys.argv[1:]
     if len(paths) != 0:
-        print(f"{len(paths)} parameter files detected.")
+        logger.info(f"{len(paths)} parameter files detected.")
         params = []
 
         for p in paths:
-            print(f"Attempting to read input file at {p} for custom parameters.")
+            logger.info(f"Attempting to read input file at {p} for custom parameters.")
             with open(p, "r") as f:
                 params.append(json.load(f))
 
@@ -552,8 +532,8 @@ def load_params(paths: list[str]):
 
     else:
         # end program if nothing is inputted
-        print("No parameter file detected.")
-        print("Ending program...")
+        logger.critical("No parameter file detected.")
+        logger.critical("Ending program...")
         sys.exit()
 
 def main():
@@ -602,18 +582,18 @@ def main():
 
     for f in time_sorted_models:
         if f.name.startswith("Gweights"):
-            print(f"Last modified Gweights file: {f.name}")
+            logger.info(f"Last modified Gweights file: {f.name}")
             target_model = f.name
             break
 
     if target_model == "":
-        print("No model found!")
-        print("Ending program...")
+        logger.critical("No model found!")
+        logger.critical("Ending program...")
         sys.exit()
 
-    print(f"Found model {target_model}!")
+    logger.info(f"Found model {target_model}!")
     make_gen_script(param['gen'], main_param, target_model)
-    print(f"Attempting to generate guesses...")
+    logger.info(f"Attempting to generate guesses...")
 
     # schedule generate script and wait for it to end
     job_id = run_slurm(str(run_path / "generate.sh"))
@@ -621,11 +601,11 @@ def main():
 
     # move data.pt and model if enabled
     if main_param['move']:
-        print(f"Making directories for move path at {move_path}")
+        logger.info(f"Making directories for move path at {move_path}")
         move_path.mkdir(parents = True, exist_ok = True)
-        print(f"Moving data.pt ({run_path / 'data.pt'}) to {move_path}")
+        logger.info(f"Moving data.pt ({run_path / 'data.pt'}) to {move_path}")
         shutil.move(run_path / "data.pt", move_path)
-        print(f"Moving model ({run_path / 'model'}) to {move_path}")
+        logger.info(f"Moving model ({run_path / 'model'}) to {move_path}")
         shutil.move(run_path / "model", move_path)
 
     # initialize SCFT step 1 directories
@@ -634,7 +614,7 @@ def main():
 
     # move gan_guesses if enabled
     if main_param['move']:
-        print(f"Moving gan_guesses ({run_path / 'gan_guesses'}) to {move_path}")
+        logger.info(f"Moving gan_guesses ({run_path / 'gan_guesses'}) to {move_path}")
         shutil.move(run_path / "gan_guesses", move_path)
 
 
@@ -649,7 +629,5 @@ def main():
     unfinished = scft_array_timeout_check("scft_1")
 
     # for sec in unfinished:
-        
-# print("{MY_PARAMETER}".strip("{}").lower())
 
 # main()
