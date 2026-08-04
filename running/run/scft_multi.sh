@@ -6,7 +6,7 @@
 #SBATCH --time=00:10:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=280m
+#SBATCH --mem=180m
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=mumma026@umn.edu,holm0994@umn.edu
 

@@ -1,7 +1,7 @@
 {
     "main": {
         "name": "first_run",
-        "abs_path": "/home/coasr2026/CO_GANs_SCFT/running/znew_running",
+        "abs_path": "/home/coasr2026/CO_GANs_SCFT/running/auto_running",
         "co_gans_path": "/home/coasr2026",
         "move": true,
         "move_path": "/home/path/to/shared"
@@ -50,6 +50,7 @@
             "array": "1-1000",
             "time_inc": "00:15:00"
         },
-        "sections": 1000
+        "sections": 1000,
+        "job_dir_name": "scft_1"
     }
 }

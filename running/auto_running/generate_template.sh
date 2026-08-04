@@ -3,11 +3,14 @@
 #SBATCH --output={LOG_PATH}/{NAME}/log/gen_%j.out
 #SBATCH --error={LOG_PATH}/{NAME}/log/gen_%j.err
 #SBATCH --time={TIME}
-#SBATCH --ntasks={TASKS}
+#SBATCH --ntasks={NTASKS}
 #SBATCH --cpus-per-task={CPUS}
 #SBATCH --mem={MEM}
 #SBATCH --mail-type={MAIL_TYPE}
 #SBATCH --mail-user={MAIL_USER}
+
+### This is a skeleton script, containing some placeholder values (with curly braces)
+### To fix these, use auto_run.py
 
 # make sure to load venv!!!
 source {CO_GANS_PATH}/CO_GANs_SCFT/.venv/bin/activate

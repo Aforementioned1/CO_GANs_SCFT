@@ -18,8 +18,10 @@ from datetime import timedelta
 from datetime import datetime
 import re
 
+import logging
+logger = logging.getLogger(__name__)
 
-JobType = Enum("JobType", "SINGLE ARRAY")
+# JobType = Enum("JobType", "SINGLE SCFT_ARRAY")
 
 def init_template(text: str, replace: dict) -> str:
     """ Replaces all key-value pairs in a provided string.=\n
@@ -33,6 +35,18 @@ def init_template(text: str, replace: dict) -> str:
 
     return text
 
+def init_template_file(in_path: str, out_path: str, replace: dict):
+    print(f"Attempting to replace template at {in_path}...")
+
+    with open(in_path, "r") as f:
+        text = f.read()
+
+    repl = init_template(text, replace)
+
+    with open(out_path, "w") as f:
+        f.write(repl)
+
+    print(f"Wrote file to {out_path}!")
 
 def str_to_timedelta(time: str):
     """ Converts a string formatted like "HH:MM:SS" to a
@@ -69,7 +83,7 @@ def add_time_strings(time_1: str, time_2: str):
 class Job:
     """ Represents a Slurm job\n
     job_id: The ID of this job\n
-    job_type: The type of this job, either JobType.SINGLE or JobType.ARRAY
+    job_type: The type of this job, either JobType.SINGLE or JobType.SCFT_ARRAY
     status: The last-updated status of this job\n
     template_path: An absolute path to the Slurm template to use when scheduling this job\n
     param: The parameters to use to fill in the template\n
@@ -83,7 +97,6 @@ class Job:
     This will vary between jobs, but a general rule of thumb for this value is 1/4 of
     the original time."""
     job_id: str
-    job_type: JobType
     status: str
     template_path: str
     param: dict
@@ -92,10 +105,9 @@ class Job:
     auto_reschedule: bool
     reschedule_add: str
 
-    def __init__(self, job_type: JobType, template_path: str, param: dict,
+    def __init__(self, template_path: str, param: dict,
                  slurm_path: str, auto_reschedule: bool, reschedule_add: str):
         self.job_id = "UNSCHEDULED"
-        self.job_type = job_type
         self.status = "UNSCHEDULED"
         self.template_path = template_path
         self.param = param
@@ -104,8 +116,17 @@ class Job:
         self.auto_reschedule = auto_reschedule
         self.reschedule_add = reschedule_add
 
-    # @classmethod
-    # def from_dict()
+    def print_attrs(self, param = False):
+        """ This is a debug method that prints all of this
+        object's instance variables\n
+        param: Whether to print the param dict"""
+        print(f"Job ID: {self.job_id} | Status: {self.status}")
+        print(f"Template Path: {self.template_path}")
+        print(f"Slurm Path: {self.slurm_path}")
+        print(f"Timeouts: {self.timeouts}")
+        print(f"AutoRes: {self.auto_reschedule} | ResAdd: {self.reschedule_add}")
+        if param:
+            print(f"Param: {self.param}")
 
     def read_template(self):
         """ Reads all template parameters (enclosed in "{}") from
@@ -117,14 +138,15 @@ class Job:
         with open(self.template_path, 'r') as f:
             text = f.read()
 
-        params = re.findall(regex, text)
+        params = list(set(re.findall(regex, text)))
 
         print("Done!")
 
         return params
 
     def create_script(self):
-        """ Writes """
+        """ Writes a script filling in the template parameters of this
+        Job's template_path, writing the script to this Job's slurm_path"""
         print("Attempting to write template...")
 
         params = self.read_template()
@@ -134,23 +156,29 @@ class Job:
         print("Attempting to locate parameters...")
 
         for p in params:
+            if "\\" in p:
+                replacements[p] = p.replace("\\", "")
+                continue
+
             # convert template parameters (styled like {MY_PARAM}) to
             # lowercase dict keys (styled like my_param)
             p_target = p.strip("{}").lower()
             # set each template parameter to its corresponding dict parameter
-            replacements[p] = self.template_param[p_target]
+            replacements[p] = self.param[p_target]
 
         print("Done!")
 
-        with open(self.template_path, "r") as f:
-            text = f.read()
+        init_template_file(self.template_path, self.slurm_path, replacements)
 
-        text = init_template(text, replacements)
+        # with open(self.template_path, "r") as f:
+        #     text = f.read()
 
-        with open(self.slurm_path, "w") as f:
-            f.write(text)
+        # text = init_template(text, replacements)
 
-        print(f"Wrote file to {self.slurm_path}")
+        # with open(self.slurm_path, "w") as f:
+        #     f.write(text)
+
+        # print(f"Wrote file to {self.slurm_path}")
 
     def schedule(self):
         """ Schedules this job to run """
@@ -169,12 +197,14 @@ class Job:
     def check(self):
         """ Checks the current status of a specified Slurm job.
             If the job's status is FAILED, NODE_FAIL, or OUT_OF_MEMORY,
-            reports it and ends the program. Otherwise, outputs the job's status.\n
-            job_id: The Slurm job to check."""
+            reports it and ends the program. Otherwise, outputs the job's status."""
+        print(f"Attempting to view job {self.job_id}'s status...")
+        
         command = ["sacct", "--format=State", "--noheader", "-P", "-j", self.job_id]
         result = subprocess.run(command, capture_output = True, text = True, check = True)
     
         code = result.stdout.splitlines()[0]
+        print(f"Job {self.job_id}'s code: {code}")
     
         # automatically exit if smth bad happens
         if code == "FAILED":
@@ -194,6 +224,19 @@ class Job:
     
         return code
 
+    def add_reschedule_time(self):
+        """ Modifies this Job's time parameter by adding the rescheduling time to itself """
+        add = self.reschedule_add
+        curr = self.param['time']
+        total = add_time_strings(curr, add)
+        print(f"Current: {curr} | Addition: {add} | Total: {total}")
+        print(f"Setting parameter time config to be {total}...")
+        self.param['time'] = total
+        print("Done!")
+        print("Overwriting Slurm script...")
+        self.create_script()
+        print("Done!")
+
     def wait_for_slurm_end(self, period = 120.0):
         """ Periodically checks for this Slurm job to finish.
         If the Slurm job's status becomes "FAILED", "NODE_FAIL" or
@@ -204,10 +247,14 @@ class Job:
         with longer times and recursively run this function until the job does not
         timeout\n
         period: The period between Slurm checks, in seconds. Defaults to 120s"""
+        if self.job_id == "UNSCHEDULED":
+            print("This job has not been scheduled yet! Returning...")
+            return
+
         finished = False
 
         while not finished:
-            code = self.slurm_check()
+            code = self.check()
             if code == "COMPLETED":
                 finished = True
             if code == "TIMEOUT":
@@ -215,16 +262,8 @@ class Job:
                 if self.auto_reschedule:
                     print("Auto reschedule is ON!")
                     print("Attempting to reschedule...")
-                    add = self.reschedule_add
-                    curr = self.param['time']
-                    total = add_time_strings(curr, add)
-                    print(f"Current: {curr} | Addition: {add} | Total: {total}")
-                    print(f"Setting parameter time config to be {total}...")
-                    self.param['time'] = total
-                    print("Done!")
-                    print("Overwriting Slurm script...")
-                    self.create_script()
-                    print("Done!")
+                    self.timeouts += 1
+                    self.add_reschedule_time()
                     self.schedule()
                     self.wait_for_slurm_end()
                 else:
@@ -235,9 +274,175 @@ class Job:
             time.sleep(period)
 
 class BranchedJob(Job):
-    """ Represents a "branched" Slurm job, where multiple
-    jobs are run at the same time with the same purpose"""
-    pass
+    """ Represents a "branched" Slurm array job, where multiple
+    jobs are run at the same time with the same purpose. The
+    major difference between Job and BranchedJob is that its
+    param dict should contain an "array" key that points to a
+    list of Slurm array strings to use."""
+    job_ids = []
+    statuses = []
+    callback = lambda self: print("No specified callback. Continuing program...")
+
+    def print_attrs(self, param=False):
+        print(f"Job IDs: {self.job_ids}")
+        print(f"Statuses: {self.statuses}")
+        super().print_attrs(param)
+
+    def schedule(self):
+        """ Schedules a job for all of the items in the "array" key """
+        for i, a in enumerate(self.param['array']):
+            print(f"Attempting to schedule job {i}...")
+            print(f"Prepping specific template...")
+            init_template_file(f"{self.slurm_path.replace('.sh', '')}_no_array.sh", f"{self.slurm_path.replace('.sh', '')}_{i}.sh", {"{ARRAY}": a})
+            print("Done!")
+
+            command = ["sbatch", "--parsable", f"{self.slurm_path.replace('.sh', '')}_{i}.sh"]
+            result = subprocess.run(command, capture_output = True, text = True, check = True)
+
+            print("Done!")
+        
+            # strip text to be safe
+            self.job_ids.append(result.stdout.strip())
+            print(f"Result: {result.stdout} | Job ID: {self.job_id}")
+
+        print(f"Scheduled {len(self.param['array'])} job(s) for all arrays!")
+
+        return self.job_ids
+
+    def create_script(self):
+        """ Writes 
+        Excludes the parameter "array" """
+        print("Attempting to write template...")
+
+        params = self.read_template()
+        # remove array
+        params.remove("{ARRAY}")
+
+        replacements = {}
+
+        print("Attempting to locate parameters...")
+
+        for p in params:
+            if "\\" in p:
+                replacements[p] = p.replace("\\", "")
+                continue
+
+            # convert template parameters (styled like {MY_PARAM}) to
+            # lowercase dict keys (styled like my_param)
+            p_target = p.strip("{}").lower()
+            # set each template parameter to its corresponding dict parameter
+            replacements[p] = self.param[p_target]
+
+        print("Done!")
+
+        init_template_file(self.template_path, f"{self.slurm_path.replace('.sh', '')}_no_array.sh", replacements)
+
+        # with open(self.template_path, "r") as f:
+        #     text = f.read()
+
+        # text = init_template(text, replacements)
+
+        # with open(self.slurm_path + "_no_array", "w") as f:
+        #     f.write(text)
+
+        # print(f"Wrote file to {self.slurm_path}_no_array")
+
+    def check(self):
+        """ Checks the current status of a specified Slurm job.
+            If the job's status is FAILED, NODE_FAIL, or OUT_OF_MEMORY,
+            reports it and ends the program. Otherwise, outputs the job's status."""
+        for i, j in enumerate(self.job_ids):
+            print(f"Attempting to view job {j} (branch index {i})'s status...")
+
+            command = ["sacct", "--format=State", "--noheader", "-P", "-j", j]
+            result = subprocess.run(command, capture_output = True, text = True, check = True)
+        
+            code = result.stdout.splitlines()[0]
+            print(f"Job {j} (branch index {i})'s code: {code}")
+
+            # make sure to append it instead of setting the
+            # value if the index doesnt exist yet
+            if 0 <= i < len(self.statuses):
+                self.statuses[i] = code
+            else:
+                self.statuses.append(code)
+                if not (0 <= i < len(self.statuses)):
+                    print(f"Warning: Code {code} not added to index {i} of statuses (job {j}, branch index {i}).")
+            print(f"Added code {code} to statuses!")
+        
+            # automatically exit if smth bad happens
+            if code == "FAILED":
+                print(f"Slurm job {j} (branch index {i}) ended with state FAILED!")
+                print("Ending process...")
+                sys.exit()
+        
+            if code == "NODE_FAIL":
+                print(f"Slurm job {j} (branch index {i}) ended with state NODE_FAIL!")
+                print("Ending process...")
+                sys.exit()
+        
+            if code == "OUT_OF_MEMORY":
+                print(f"Slurm job {j} (branch index {i}) ended with state OUT_OF_MEMORY!")
+                print("Ending process...")
+                sys.exit()
+        
+        return self.statuses
+
+    def wait_for_slurm_end(self, period = 240.0):
+        """ Periodically checks for this Slurm job to finish.
+        If the Slurm job's status becomes "FAILED", "NODE_FAIL" or
+        "OUT_OF_MEMORY", terminates the program\n
+        This function is blocking and will not return execution until this job's
+        status becomes "COMPLETED"\n
+        If auto_reschedule is True, this function will continue to schedule jobs
+        with longer times and recursively run this function until the job does not
+        timeout\n
+        period: The period between Slurm checks, in seconds. Defaults to 240s"""
+
+        finished = False
+
+        while not finished:
+            codes = self.check()
+            for c in codes:
+                # iterate over all codes to see if theyre done
+                if not (c == "COMPLETED" or c == "TIMEOUT"):
+                    finished = True
+
+            time.sleep(period)
+
+        # execute the callback function
+        self.callback(self)
+
+    # def bind_callback(self, new_callback: function):
+    #     """ Binds a new callback function to this BranchedJob. By default,
+    #     the callback prints a message and continues.\n
+    #     new_callback: The callback function to use when all branches finish execution.
+    #     Must take a BranchedJob object as a parameter."""
+        # self.callback = new_callback
+
+def scft_callback(job: BranchedJob):
+    """ This function is intended to be used as a callback for
+    a BranchedJob object"""
+    # use code from print_dirs.py to find which ones are left, in array form
+    left = scft_array_timeout_check(str(Path(job.param['abs_path']) / job.param['name'] / job.param['job_dir_name']))
+
+    # exit early if there's nothing left to avoid getting stuck in a loop
+    if len(left) == 0:
+        return
+
+    # override existing arrays
+    job.param['array'] = left
+
+    # prepare parameters for next run to be safe
+    job.timeouts += 1
+    job.job_ids = []
+    job.statuses = []
+
+    job.add_reschedule_time()
+
+    # schedule and wait
+    job.schedule()
+    job.wait_for_slurm_end()
 
 def run_python(path: str, args: list):
     command = ["python", path].extend(args)
@@ -286,7 +491,7 @@ def scft_array_timeout_check(dir: str):
             if rev:
                 log = d / "log"
 
-                state = run_scft.get_state_cat(d.absolute(), debug = debug)
+                state = run_scft.get_state_cat(str(d), debug = debug)
                 if debug:
                     print(f"{d.name}'s state is: {state}")
                 
@@ -321,22 +526,28 @@ def scft_array_timeout_check(dir: str):
 
     return out_strs
 
-def load_params(param_path: str):
-    if param_path != None:
-        print("Parameter file detected.")
-        print(f"Attempting to read input file at {param_path} for custom parameters.")
-        with open(param_path, "r") as f:
-            param = json.load(f)
+def load_params(paths: list[str]):
+    """ Attempts to load JSON parameters from all file paths in paths.
+    This can be used to easily change small amounts of JSON parameters while
+    keeping the original defaults intact\n
+    NOTE: Any duplicate parameters in later files will automatically override
+    existing duplicates from earlier files\n
+    paths: A list of all paths to read. This program uses sys.argv[1:] by default"""
+    # sys.argv[1:]
+    if len(paths) != 0:
+        print(f"{len(paths)} parameter files detected.")
+        params = []
 
-            # # add the scft_1 and scft_2 JSON objects to their
-            # # own variables for easier access later
-            # param_scft_1 = param["scft_1"]
-            # param_scft_2 = param["scft_2"]
+        for p in paths:
+            print(f"Attempting to read input file at {p} for custom parameters.")
+            with open(p, "r") as f:
+                params.append(json.load(f))
 
-            # # add certain frequently used parameters as variables for easier access later
-            # min = param["gan_min"]
-            # max = param["gan_max"]
-        
+        param = params[0]
+
+        for p in params:
+            param | p
+
         return param
 
     else:
@@ -345,101 +556,13 @@ def load_params(param_path: str):
         print("Ending program...")
         sys.exit()
 
-def make_train_script(train_param: dict, main_param: dict):
-    print("Making train.sh script...")
-    slurm_param = train_param['slurm']
-
-    replacements = {
-        "{TRAIN_NAME}": slurm_param['name'],
-        "{NAME}": main_param['name'],
-        "{LOG_PATH}": slurm_param['log_path'],
-        "{TIME}": slurm_param['time'],
-        "{TASKS}": slurm_param['ntasks'],
-        "{CPUS}": slurm_param['cpus_per_task'],
-        "{MEM}": slurm_param['mem'],
-        "{GRES}": slurm_param['gres'],
-        "{MAIL_TYPE}": slurm_param['mail_type'],
-        "{MAIL_USER}": slurm_param['mail_user'],
-        "{PARTITION}": slurm_param['partition'],
-        "{CO_GANS_PATH}": main_param['co_gans_path'],
-        "{ABS_PATH}": main_param['abs_path'],
-        "{BATCH_SIZE}": train_param['batch_size'],
-        "{LEARNING_RATE}": train_param['learning_rate']
-    }
-
-    with open((Path(main_param['co_gans_path']) / "CO_GANs_SCFT/running/auto_running/train_template.sh"), "r") as f:
-        text = f.read()
-
-    text = init_template(text, replacements)
-
-    with open((Path(main_param['abs_path']) / main_param['name'] / "train.sh"), "w") as f:
-        f.write(text)
-
-    print(f"Wrote file to {(Path(main_param['abs_path']) / main_param['name'] / 'train.sh')}")
-
-def make_gen_script(gen_param: dict, main_param: dict, gweights_name: str):
-    print("Making generate.sh script...")
-    slurm_param = gen_param['slurm']
-
-    replacements = {
-        "{GEN_NAME}": slurm_param['name'],
-        "{NAME}": main_param['name'],
-        "{LOG_PATH}": slurm_param['log_path'],
-        "{TIME}": slurm_param['time'],
-        "{TASKS}": slurm_param['ntasks'],
-        "{CPUS}": slurm_param['cpus_per_task'],
-        "{MEM}": slurm_param['mem'],
-        "{MAIL_TYPE}": slurm_param['mail_type'],
-        "{MAIL_USER}": slurm_param['mail_user'],
-        "{CO_GANS_PATH}": main_param['co_gans_path'],
-        "{ABS_PATH}": main_param['abs_path'],
-        "{GWEIGHTS}": gweights_name
-    }
-
-    with open((Path(main_param['co_gans_path']) / "CO_GANs_SCFT/running/auto_running/generate_template.sh"), "r") as f:
-        text = f.read()
-
-    text = init_template(text, replacements)
-
-    with open((Path(main_param['abs_path']) / main_param['name'] / "generate.sh"), "w") as f:
-        f.write(text)
-
-    print(f"Wrote file to {(Path(main_param['abs_path']) / main_param['name'] / 'generate.sh')}")        
-
-def make_scft_1_script(scft_param: dict, main_param: dict):
-    print("Making scft_multi.sh script...")
-    slurm_param = scft_param['slurm']
-
-    replacements = {
-        "{SCFT_1_NAME}": slurm_param['name'],
-        "{NAME}": main_param['name'],
-        "{LOG_PATH}": slurm_param['log_path'],
-        "{ARRAY}": slurm_param['array'],
-        "{TIME}": slurm_param['time'],
-        "{TASKS}": slurm_param['ntasks'],
-        "{CPUS}": slurm_param['cpus_per_task'],
-        "{MEM}": slurm_param['mem'],
-        "{MAIL_TYPE}": slurm_param['mail_type'],
-        "{MAIL_USER}": slurm_param['mail_user'],
-        "{CO_GANS_PATH}": main_param['co_gans_path'],
-        "{ABS_PATH}": main_param['abs_path'],
-        "{SEC_SIZE}": int(5000 / scft_param['sections'])
-    }
-
-    with open((Path(main_param['co_gans_path']) / "CO_GANs_SCFT/running/auto_running/scft_multi_template.sh"), "r") as f:
-        text = f.read()
-
-    text = init_template(text, replacements)
-
-    with open((Path(main_param['abs_path']) / main_param['name'] / "scft_multi.sh"), "w") as f:
-        f.write(text)
-
-    print(f"Wrote file to {(Path(main_param['abs_path']) / main_param['name'] / 'scft_multi.sh')}") 
-
 def main():
     # load JSON parameters
     # using sys.argv for now
-    param = load_params(sys.argv[1])
+
+    logging.basicConfig(level = logging.INFO, filename = "test.log", format='%(asctime)s [%(levelname)s] %(message)s')
+
+    param = load_params(sys.argv[2:])
 
     main_param = param['main']
 
@@ -458,13 +581,19 @@ def main():
         run_path.mkdir(parents = True, exist_ok = True)
 
     # copy 
-    shutil.copy(param['data_path'], (run_path / "data.pt").absolute())
+    shutil.copy(param['data_path'], str(run_path / "data.pt"))
+
+    train_job = Job(co_gans_path / "CO_GANs_SCFT/running/auto_running/train_template.sh",
+                    param['train']['slurm'] | param['train'] | main_param, main_paths['run_path'] / "train.sh",
+                    True, param['train']['slurm']['time_inc'])
+
+    train_job.create_script()
 
     # make train.sh script
     make_train_script(train_param = param['train'], main_param = main_param)
 
     # schedule train script and wait for it to end
-    job_id = run_slurm((run_path / "train.sh").absolute())
+    job_id = run_slurm(str(run_path / "train.sh"))
     wait_for_slurm_end(job_id = job_id)
 
     # find latest model file
@@ -487,7 +616,7 @@ def main():
     print(f"Attempting to generate guesses...")
 
     # schedule generate script and wait for it to end
-    job_id = run_slurm((run_path / "generate.sh").absolute())
+    job_id = run_slurm(str(run_path / "generate.sh"))
     wait_for_slurm_end(job_id = job_id)
 
     # move data.pt and model if enabled
@@ -508,11 +637,12 @@ def main():
         print(f"Moving gan_guesses ({run_path / 'gan_guesses'}) to {move_path}")
         shutil.move(run_path / "gan_guesses", move_path)
 
+
     # make scft_multi.sh script
     make_scft_1_script(param['scft_1'], main_param)
 
     # schedule generate script and wait for it to end
-    job_id = run_slurm((run_path / "scft_multi.sh").absolute())
+    job_id = run_slurm(str(run_path / "scft_multi.sh"))
     wait_for_slurm_end(job_id = job_id)
 
     # find ones that didn't finish

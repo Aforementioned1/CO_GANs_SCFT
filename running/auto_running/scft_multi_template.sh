@@ -4,11 +4,14 @@
 #SBATCH --error={LOG_PATH}/{NAME}/log/scft_1/%A/%a.err
 #SBATCH --array={ARRAY}
 #SBATCH --time={TIME}
-#SBATCH --ntasks={TASKS}
+#SBATCH --ntasks={NTASKS}
 #SBATCH --cpus-per-task={CPUS}
 #SBATCH --mem={MEM}
 #SBATCH --mail-type={MAIL_TYPE}
 #SBATCH --mail-user={MAIL_USER}
+
+### This is a skeleton script, containing some placeholder values (with curly braces)
+### To fix these, use auto_run.py
 
 # Run multiple SCFT step 2 processes with Slurm arrays
 

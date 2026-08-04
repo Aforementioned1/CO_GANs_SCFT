@@ -14,6 +14,10 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import colorsys
 
+TRANSLATIONS = [("first_run", 1), ("second_run", 2), ("third_run", 3), ("fourth_run", 4), ("eighth_run", 8),
+                ("ninth_run", 9), ("tenth_run", 10), ("eleventh_run", 11), ("twelfth_run", 12), ("thirteenth_run", 13)]
+
+
 f_DG = 2.74517041186 # free energy of the double gyroid phase
 
 max_iterations = 2500
@@ -1450,7 +1454,7 @@ def read_multi_csv(dirs: list[str], csv_cols = [("free_energy", lambda text: flo
 
     
 def improved_uniques(data: list[tuple[float, str, str]], epsilon = 0.00001, excluded_vals = [-1],
-                     const = 0, tol_debug = False, debug = False) -> dict[list[tuple[float, str, str]]]:
+                     const = 0, tol_debug = False, debug = False) -> dict[str, list[tuple[float, str, str]]]:
     """ Finds information on unique solutions. This is designed to be an improved version
     of find_neighbors() (hence the name) that preserves more information for future use. It
     is also designed to work well with the output of read_multi_csv() (after being passed
@@ -1667,11 +1671,33 @@ def dynamic_hex_rainbow(names: list[str], s: float, v: float, min_clamp = 0.0, m
 
     return colors
 
-# colors = dynamic_hex_rainbow(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"], 0.5, 1.0, max_clamp = 1.0)
+def get_first_in_cluster(groups: dict[str, list[tuple[float, str, str]]]):
+    """ Returns the name and trial name of the first constituent of every inputted cluster\n
+    groups: The clusters to use"""
+    names = []
+    for d in groups.values():
+        names.append((d[0][1], d[0][2]))
 
-# groups = improved_uniques(combine_lists(read_multi_csv(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"])),
-#                           const = f_DG, excluded_vals= [-1 - f_DG])
+    return names
 
+def copy_files(pre_path: str, files: list[tuple[str, str]], temp_dir: str, name_end = "c.rf", translations = TRANSLATIONS,
+               mid_path = "scft_2", post_path = "out/c.rf"):
+    for name, trial in files:
+        translation_name = trial
+        for k, v in translations:
+            if trial == k:
+                translation_name = v
+
+        shutil.copy((Path(pre_path) / trial / mid_path / name / post_path).absolute(), (Path(temp_dir) / f"{translation_name}_{name}_{name_end}").absolute())
+
+# # colors = dynamic_hex_rainbow(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"], 0.5, 1.0, max_clamp = 1.0)
+
+groups = improved_uniques(combine_lists(read_multi_csv(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"])),
+                          const = f_DG, excluded_vals= [-1 - f_DG])
+
+print(len(get_first_in_cluster(groups)))
+
+# 
 # print(groups)
 
 # print(cluster_histogram(groups[2.70642211386], "ztest.png", debug = True))
