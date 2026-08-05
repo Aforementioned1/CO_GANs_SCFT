@@ -528,11 +528,11 @@ def deep_merge(dict_1: dict, dict_2: dict, recursive = False):
                 if recursive:
                     deeper_merge = False
 
-                    for k2, v2 in v.items():
+                    for v2 in v.values():
                         # print(f"First {v2}")
                         if isinstance(v2, dict):
                             deeper_merge = True
-                    for k2, v2 in dict_1[k].items():
+                    for v2 in dict_1[k].values():
                         # print(f"Second {v2}")
                         if isinstance(v2, dict):
                             deeper_merge = True
@@ -545,7 +545,6 @@ def deep_merge(dict_1: dict, dict_2: dict, recursive = False):
                         out[k] = v | out[k]
                 else:
                     out[k] = v | out[k]
-                # out[k] = deep_merge(out[k], v)
             else:
                 out[k] = v
 
@@ -652,6 +651,113 @@ def scft_1_conv(run_path: Path, param: dict):
     
         # ERR
         logger.info(f"Error (no directory):        {data['err']}")
+
+def scft_1_time(run_path: Path, param: dict):
+    print("[HELPER] SCFT_1_TIME (3)")
+    run_scft.review_csv_timings(str(run_path / "data/scft_1.csv"), sec_div = param["scft_1"]["sec_div"], debug = False)
+
+def prep_scft_2(run_path: Path, co_gans_path: Path, param: dict):
+    print("PREP_SCFT_2 (4)")
+    # read names of each initial guess (should be 1-250) and whether they converged
+    names = run_scft.read_csv_col(in_path = str(run_path / "data/scft_1.csv"), 
+                                  col = "name", debug = False)
+    
+    # make sure to cast string boolean values as booleans - requires more complex logic
+    # as bool() method considers any non-empty str true
+
+    # not adding the lambda as a parameter as it would likely be hard to
+    # serialize/deserialize and should not change
+    # despite this, the column names have still been
+    # included as parameters, which should also never change
+    conv = run_scft.read_csv_col(in_path = str(run_path / "data/scft_1.csv"), col = "converged",
+                data_lambda = lambda text: True if text == "True" else False, debug = False)
+
+    # get all guesses that converged with step 1
+    conv_names = run_scft.find_true_names(bools = conv, names = names)
+
+    # prepare for second SCFT pass
+    # scft_2's in should be the same as scft_1's out, but decided to make separate param
+    run_scft.prepare_files_second(in_path = str(run_path / "scft_1"), dir_names = conv_names,
+                out_path = str(run_path / "scft_2"),
+                param_path = str(co_gans_path / param['scft_2']['param_path']),
+                command_path = str(co_gans_path / param['scft_2']['command_path']),
+                run_path =  str(co_gans_path / param['scft_2']['run_path']),
+                debug = False)
+
+    print("FIX_W_BASIS (4.5)")
+    # this uses the more advanced save_w_basis_dir() rather than the outdated fix_w_basis_dir()
+
+    # fix w.bf files for second SCFT pass
+    run_scft.save_w_basis_dir(in_dir = str(run_path / "scft_2"), debug = False)
+
+def scft_2_to_csv(run_path: Path):
+    print("SCFT_2_TO_CSV (5)")
+    # combine data to CSV file
+    run_scft.to_csv_num(dir_path = str(run_path / "scft_2"), num_start = 1, num_end = 5000,
+                        output = str(run_path / "data/scft_2.csv"), debug = False)
+
+def scft_2_conv(run_path: Path, param: dict):
+    print("SCFT_2_CONV (6)")
+    data = {
+        "suc":  0, # all in group SUC
+        "conv": 0, # SUC_CONV
+        "fin":  0, # SUC_MAX_ITER and SUC_NO_CONV
+        "iter": 0, # SUC_MAX_ITER
+        "nocv": 0, # SUC_NO_CONV
+        "warn": 0, # all in group WARN
+        "log":  0, # WARN_NO_LOG
+        "noit": 0, # WARN_NO_ITER
+        "unf":  0, # WARN_NOT_FIN
+        "err":  0  # ERR_NO_DIR
+    }
+
+    for d in sorted((run_path / "scft_2").iterdir(), key = lambda d: int(d.stem)):
+        state = run_scft.calc_state(d.absolute(), debug = False)
+
+        match state:
+            # group SUC
+            case "SUC_CONV":
+                data["suc"] += 1
+                data["conv"] += 1 
+            case "SUC_MAX_ITER":
+                data["suc"] += 1
+                data["fin"] += 1
+                data["iter"] += 1
+            case "SUC_NO_CONV":
+                data["suc"] += 1
+                data["fin"] += 1
+                data["nocv"] += 1
+            # group WARN
+            case "WARN_NO_LOG":
+                data["warn"] += 1
+                data["log"] += 1
+            case "WARN_NO_ITER":
+                data["warn"] += 1
+                data["noit"] += 1 
+            case "WARN_NOT_FIN":
+                data["warn"] += 1
+                data["unf"] += 1 
+            # group ERR
+            case "ERR_NO_DIR":
+                data["err"] += 1
+
+    # SUC
+    print(f"Finished (total):           {data['suc']}")
+    print(f"Finished (converged):       {data["conv"]}")
+    print(f"Finished (not converged):   {data["fin"]}")
+    if param['scft_2']['detailed_conv']:
+        print(f"Finished (max iterations):  {data['iter']}")
+        print(f"Finished (no convergence):  {data['nocv']}")
+
+    # WARN
+    print(f"Unfinished (total):         {data['warn']}")
+    if param['scft_2']['detailed_conv']:
+        print(f"Unfinished (no log):        {data['log']}")
+        print(f"Unfinished (no iterations): {data['noit']}")
+        print(f"Unfinished (iterations):    {data['unf']}")
+
+    # ERR
+    print(f"Error (no directory):        {data['err']}")
 
 def load_params(paths: list[str]):
     """ Attempts to load JSON parameters from all file paths in paths.

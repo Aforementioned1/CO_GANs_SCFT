@@ -22,7 +22,8 @@ parser = argparse.ArgumentParser()
 
 step_choices = ["HELP", "PREP_SCFT_1", "SCFT_1_TO_CSV", "SCFT_1_CONV", "SCFT_1_TIME",
                 "PREP_SCFT_2", "SCFT_2_TO_CSV", "SCFT_2_CONV",
-                "SCFT_2_TIME", "UNIQUE_SOLN"]
+                "SCFT_2_TIME", "UNIQUE_SOLN", "SCFT_1_CONV_OLD", "SCFT_2_CONV_OLD",
+                "FIX_W_BASIS_OLD"]
 num_choices = [i for i in range(-1, len(step_choices) - 1)] 
 
 group = parser.add_mutually_exclusive_group(required = True)
@@ -67,14 +68,14 @@ if num == -1:
     print("SCFT_1_TO_CSV   1          Collect data from SCFT step 1 calculations and write it to a CSV file")
     print("SCFT_1_CONV     2          Print information regarding how many SCFT step 1 calculations converged")
     print("SCFT_1_TIME     3          Print information regarding how long SCFT step 1 calculations took")
-    print("PREP_SCFT_2     4          Prepare directories for converged SCFT step 1 calculations so that they can be run through SCFT step 2")
-    print("FIX_W_BASIS     4.5        Fix w.bf files outputted from SCFT step 1 in preparation for SCFT step 2 (included in step 4)")
+    print("PREP_SCFT_2     4          Prepare directories for converged SCFT step 1 calculations so that they can be run through SCFT step 2. This also fixes w.bf files so that they will work for step 2.")
     print("SCFT_2_TO_CSV   5          Collect data from SCFT step 2 calculations and write it to a CSV file")
     print("SCFT_2_CONV     6          Print information regarding how many SCFT step 2 calculations converged")
     print("SCFT_2_TIME     7          Print information regarding how long SCFT step 1 calculations took")
     print("UNIQUE_SOLN     8          Print information regarding how many converged solutions from SCFT step 2 can be considered unique")
     print("SCFT_1_CONV_OLD 9          (Deprecated): Print information regarding how many SCFT step 1 calculations converged")
     print("SCFT_2_CONV_OLD 10         (Deprecated): Print information regarding how many SCFT step 2 calculations converged")
+    print("FIX_W_BASIS_OLD 11         Fix w.bf files outputted from SCFT step 1 in preparation for SCFT step 2 (included in step 4)")
     print("---------------------------------------------------------------------------------------------------------------------------------")
 
 if param_path != None:
@@ -213,28 +214,13 @@ if num == 4:
                 run_path = param_scft_2["run"], debug = debug)
 
     print("FIX_W_BASIS (4.5)")
-    # get ignored names for fixing w.bf files
-    ignored_names = run_scft.read_csv_col(in_path = param["ignored_path"], col = param["ignored_col"], debug = debug)
-
-    # if the file doesn't exist, make it
-    if ignored_names == False:
-        # make sure to cast as a string to be safe
-        print("Creating ignored name file at " + str(param["ignored_path"]) + "...")
-        # create and write CSV header (name\n)
-        with open(param["ignored_path"], "w") as f:
-            f.write(str(param["ignored_col"]) + "\n")
-
-        ignored_names = []
+    # this uses the more advanced save_w_basis_dir() rather than the outdated fix_w_basis_dir()
 
     # fix w.bf files for second SCFT pass
-    # use out_path for both, as this should just replace the existing w.bf files
-    run_scft.fix_w_basis_dir(in_path = param_scft_2["out_path"], ignored_names = ignored_names,
-                             out_path = param_scft_2["out_path"], in_name = param["w_in_name"],
-                             out_name = param["w_out_name"], write_fixed = param["write_fixed_w_basis"],
-                             fixed_path = param["fixed_w_basis_path"], debug = debug)
+    run_scft.save_w_basis_dir(in_dir = param_scft_2["out_path"], debug = debug)
 
 # 6 (SCFT_2_TO_CSV)
-if num == 6:
+if num == 5:
     print("SCFT_2_TO_CSV (5)")
     # combine data to CSV file
     run_scft.to_csv_num(dir_path = param_scft_2["out_path"], num_start = min, num_end = max,
@@ -242,7 +228,7 @@ if num == 6:
     
 # 7 (SCFT_2_CONV)
 # this code is from conv_helper.py
-if num == 7:
+if num == 6:
     print("SCFT_2_CONV (6)")
     data = {
         "suc":  0, # all in group SUC
@@ -306,12 +292,12 @@ if num == 7:
     print(f"Error (no directory):        {data['err']}")
 
 # 8 (SCFT_2_TIME)
-if num == 8:
+if num == 7:
     print("SCFT_2_TIME (7)")
     run_scft.review_csv_timings(param_scft_2["time_path"], sec_div = param_scft_2["sec_div"], debug = debug)
 
 # 9 (UNIQUE_SOLN)
-if num == 9:
+if num == 8:
     print("UNIQUE_SOLN (8)")
     data = run_scft.read_csv_col(param_scft_2["data_path"], "free_energy", lambda text: float(text), True)
     clusters = run_scft.find_neighbors(data = data, excluded_vals = [-1], const = 0, tol_debug = False, debug = debug)
@@ -328,7 +314,7 @@ if num == 9:
 # 10 (SCFT_1_CONV_OLD)
 # this code is from conv_helper.py
 # NOTE: this function is deprecated and will likely be removed in a later version of the code!!!
-if num == 10:
+if num == 9:
     print("SCFT_1_CONV_OLD (9)")
     print("This function is deprecated and will likely be removed in a later version of the code!!!")
     iter = 0
@@ -367,7 +353,7 @@ if num == 10:
 # 7 (SCFT_2_CONV_OLD)
 # this code is from conv_helper.py
 # NOTE: this function is deprecated and will likely be removed in a later version of the code!!!
-if num == 11:
+if num == 10:
     print("SCFT_2_CONV_OLD (10)")
     print("This function is deprecated and will likely be removed in a later version of the code!!!")
     iter = 0
@@ -401,5 +387,28 @@ if num == 11:
     print("Number (fully) ITER(ated):", iter)
     print("Number CONV(erged)/(fully) ITER(ated):", i)
     print("Number NEIT(her)", neither)
+
+if num == 11:
+    print("FIX_W_BASIS_OLD (11)")
+    print("This function is deprecated and will likely be removed in a later version of the code!!!")
+    # get ignored names for fixing w.bf files
+    ignored_names = run_scft.read_csv_col(in_path = param["ignored_path"], col = param["ignored_col"], debug = debug)
+
+    # if the file doesn't exist, make it
+    if ignored_names == False:
+        # make sure to cast as a string to be safe
+        print("Creating ignored name file at " + str(param["ignored_path"]) + "...")
+        # create and write CSV header (name\n)
+        with open(param["ignored_path"], "w") as f:
+            f.write(str(param["ignored_col"]) + "\n")
+
+        ignored_names = []
+
+    # fix w.bf files for second SCFT pass
+    # use out_path for both, as this should just replace the existing w.bf files
+    run_scft.fix_w_basis_dir(in_path = param_scft_2["out_path"], ignored_names = ignored_names,
+                            out_path = param_scft_2["out_path"], in_name = param["w_in_name"],
+                            out_name = param["w_out_name"], write_fixed = param["write_fixed_w_basis"],
+                            fixed_path = param["fixed_w_basis_path"], debug = debug)
 
 print("Finished!")

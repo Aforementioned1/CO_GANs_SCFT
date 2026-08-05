@@ -402,6 +402,45 @@ def save_w_basis(in_dir: str, names: list[str], sub_name = "w.bf", debug = False
         with open((in_path / n / sub_name).absolute(), "w") as f:
             f.writelines(lines)
 
+def save_w_basis_dir(in_dir: str, numerical = True, sub_name = "w.bf", debug = False):
+    in_path = Path(in_dir)
+
+    for n in sorted(in_dir.iterdir(), key = lambda d: int(d.stem) if numerical else d):
+        with open((in_path / n / sub_name).absolute(), "r") as f:
+            # read as lines for easier processing
+            lines = f.readlines()
+
+        if debug:
+            print("Initial line 5:", lines[4])
+            print("Initial line 7:", lines[6])
+            print("Initial line 9:", lines[8])
+            print("Initial line 15:", lines[13])
+
+        # can always make it triclinic
+        lines[4] = "              triclinic\n"
+
+        # can always fix N_cell_param
+        lines[6] = "              6\n"
+
+        # fix cell_param - this one is trickier
+        lines[8] = lines[8].rstrip("\n")
+        while lines[8].rfind("    0.000    0.000    1.5707963") != -1:
+            lines[8] = lines[8].removesuffix("    0.000    0.000    1.5707963")
+
+        lines[8] + "    0.000    0.000    1.5707963\n"
+
+        # can always make it 17000
+        lines[14] = "             17000\n"
+
+        if debug:
+            print("Final line 5:", lines[4])
+            print("Final line 7:", lines[6])
+            print("Final line 9:", lines[8])
+            print("Final line 15:", lines[13])
+
+        with open((in_path / n / sub_name).absolute(), "w") as f:
+            f.writelines(lines)    
+
 def fix_w_basis_dir(in_path: str, ignored_names: list[str], out_path: str,
                     in_name: str, out_name: str, write_fixed = False,
                     fixed_path = "fixed.csv", debug = False):

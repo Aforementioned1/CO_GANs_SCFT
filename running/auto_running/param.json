@@ -55,6 +55,7 @@
         "param_path": "running/first/param",
         "command_path": "running/first/command",
         "run_path": "running/first/run",
-        "detailed_conv": true
+        "detailed_conv": true,
+        "sec_div": 3600
     }
 }
