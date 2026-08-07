@@ -1,0 +1,1 @@
+Today, I began by continuing my work on copying functions from `scft_helpers.py` to `auto_run.py`. 

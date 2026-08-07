@@ -34,7 +34,7 @@ group.add_argument("-n", "--num", type = int, choices = num_choices, help =
                    by using \"--num -1\" or \"--step HELP\".""", default = -2)
 group.add_argument("-s", "--step", type = lambda text: text.upper(), choices = step_choices,
                 help = "The step to execute. Use \"--num -1\" or \"--step HELP\" for more information about each step.", default = "NULL")
-parser.add_argument("-p", "--param", help = "The parameter file to use")
+parser.add_argument("-p", "--param", help = "The JSON parameter file to use")
 parser.add_argument("-v", "--verbose", action = "store_true",
                 help = "Enable verbose output from run_scft's functions (for debugging purposes)")
 # parser.add_argument("-c", "--copy", action = "store_true", help = "Automatically copy output to clipboard.")
@@ -75,7 +75,7 @@ if num == -1:
     print("UNIQUE_SOLN     8          Print information regarding how many converged solutions from SCFT step 2 can be considered unique")
     print("SCFT_1_CONV_OLD 9          (Deprecated): Print information regarding how many SCFT step 1 calculations converged")
     print("SCFT_2_CONV_OLD 10         (Deprecated): Print information regarding how many SCFT step 2 calculations converged")
-    print("FIX_W_BASIS_OLD 11         Fix w.bf files outputted from SCFT step 1 in preparation for SCFT step 2 (included in step 4)")
+    print("FIX_W_BASIS_OLD 11         (Deprecated): Fix w.bf files outputted from SCFT step 1 in preparation for SCFT step 2")
     print("---------------------------------------------------------------------------------------------------------------------------------")
 
 if param_path != None:
