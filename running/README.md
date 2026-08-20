@@ -93,7 +93,7 @@ NOTE: `fix_w_basis_dir()` currently does not write a CSV header to the specified
 Once these helper functions have been run to prepare the second step of SCFT, the same execution functions may be used to run PSCF (see [Running PSCF](#running-pscf)).
 
 ## Built-in Implementations
-To allow for easy use of the utilities of [`run_scft.py`](./run_scft.py) as soon as a user clones the repository, this fork also provides some built-in implementations of `run_scft.py` usages (see the previous section, [SCFT Helpers](#scft-helpers) for more information on the utilites of `run_scft.py`). The files [`scft_helpers.py`](./scft_helpers.py) and [`auto_running/auto_run.py`](./auto_running/auto_run.py) provide manual and automatic utilites that can be easily used. Both programs also require some additional JSON parameters in order to run that allow for more advanced customization. While default files are provided for both programs, the following subsections also detail what each parameter is and what it does.
+To allow for easy use of the utilities of [`run_scft.py`](./run_scft.py) as soon as a user clones the repository, this fork also provides some built-in implementations of `run_scft.py` usages (see the previous section, [SCFT Helpers](#scft-helpers), for more information on the utilites of `run_scft.py`). The files [`scft_helpers.py`](./scft_helpers.py) and [`auto_running/auto_run.py`](./auto_running/auto_run.py) provide manual and automatic utilites that can be easily used. Both programs also require some additional JSON parameters in order to run that allow for more advanced customization. While default files are provided for both programs, the following subsections also detail what each parameter is and what it does.
 
 #### Front-Facing Implementation
 The file [`scft_helpers.py`](./scft_helpers.py) provides critical front-facing utilities. The program should typically be run manually, as it requires some command line arguments and many of its functions print outputs. The program has 4 command line flags:
@@ -140,7 +140,7 @@ If not file is passed into the program as a command line argument, it will immed
 
 #### Front-Facing JSON Parameters
 In order to utilize the functionality provided by [`scft_helpers.py`](./scft_helpers.py), one must pass in a JSON parameter file. These parameters tell the program information about how to interact with your SCFT trials (such as which directory you are storing your calculations in). While the program does provide a default template parameter file, [`run/param.json`](./run/param.json), users may want or need to change certain parameters. This section describes all requireid JSON parameters for `scft_helpers.py`. For more information on what `scft_helpers.py` can do, see [Front-Facing Implementation](#front-facing-implementation).\
-**Developer's Note**: In order to ease the creation of parameter files that only modify the target directory, [`run/param.json](./run/param.json) is a _template_ file. While it could theoretically be used, many of its parameters refer to a directory named "input". Every instance of "input" is a directory that should typically be the same. To copy a version of `run/param.json` to a specified directory with every instance of "input" replaced with the directory name, the Python program [`run/modify_param.py`](./run/modify_param.py) is provided in this repository. The program requires one command line argument, `--dir` (`-d`), which is the directory to create a parameter file for. It is important to note that `modify_param.py` explicitly prepends `..` to the path you provide. This means that, while you should _run_ `modify_param.py` from the directory [`~/running/run`](./run/), the directory you _input_ should be relative to [`~/running`](../running/)
+**Developer's Note**: In order to ease the creation of parameter files that only modify the target directory, [`run/param.json`](./run/param.json) is a _template_ file. While it could theoretically be used, many of its parameters refer to a directory named "input". Every instance of "input" is a directory that should typically be the same. To copy a version of `run/param.json` to a specified directory with every instance of "input" replaced with the directory name, the Python program [`run/modify_param.py`](./run/modify_param.py) is provided in this repository. The program requires one command line argument, `--dir` (`-d`), which is the directory to create a parameter file for. It is important to note that `modify_param.py` explicitly prepends `..` to the path you provide. This means that, while you should _run_ `modify_param.py` from the directory [`~/running/run`](./run/), the directory you _input_ should be relative to [`~/running`](../running/)
 
 List of JSON Parameters:
 Note: `run_dir` refers to the replacement you are using for `input` (see Developer's Note above).
@@ -186,14 +186,87 @@ While [`scft_helpers.py`](./scft_helpers.py) (discussed in the previous two subs
 
 #### Automatic Execution JSON Parameters
 
+- main: An object containing the following general parameters about your run through:
+  - name: The directory name that you are running in. This should be a single name (not a path).
+  - abs_path: An absolute path to name, excluding name.
+  - co_gans_path: An absolute path to your clone of this repository (do not include the directory CO_GANs_SCFT at the end of the path)
+  - move: 
+  - move_path: 
+- data_path: A path to the training data tensor file to use.
+- train: A JSON object containing information relating to the Slurm job used for training GANs.
+  - slurm: A JSON object containing information relating to the Slurm job used for training GANs' Slurm configurations.
+    - slurm_name: The Slurm job name to use
+    - log_path: An absolute path to write log files to. main.name and the job's ID will be appended to the path
+    - time: The time limit for this job
+    - ntasks: The number of tasks to run
+    - cpus: The number of CPUs to use per task
+    - mem: The memory to use per task
+    - gres: The GPUs to use
+    - mail_type: The mail conditions to use for Slurm
+    - mail_user: The user(s) to send automated Slurm emails to
+    - partition: The partition to run the job on
+    - time_inc: The amount of time to add each time the job fails
+  - batch_size: The value to use for the `--batch_size` command line argument of [`../train/GAN_train.py`](../train/GAN_train.py)
+  - learning_rate: The value to use for the `--lr` command line argument of [`../train/GAN_train.py`](../train/GAN_train.py)
+- gen: A JSON object containing information relating to the Slurm job used to generate GAN guesses
+  - slurm: A JSON object containing information relating to the Slurm job used to generate GAN guesses
+    - slurm_name: The Slurm job name to use
+    - log_path: An absolute path to write log files to. main.name and the job's ID will be appended to the path
+    - time: The time limit for this job
+    - ntasks: The number of tasks to run
+    - cpus: The number of CPUs to use per task
+    - mem: The memory to use per task
+    - mail_type: The mail conditions to use for Slurm
+    - mail_user: The user(s) to send automated Slurm emails to
+    - time_inc: The amount of time to add each time the job fails
+- scft_1: A JSON object containing information relating to the Slurm job used to run SCFT step 1
+  - slurm: A JSON object containing information relating to the Slurm job used for SCFT step 1
+    - slurm_name: The Slurm job name to use
+    - log_path: An absolute path to write log files to. main.name and the job's ID will be appended to the path
+    - time: The time limit for this job
+    - ntasks: The number of tasks to run
+    - cpus: The number of CPUs to use per task
+    - mem: The memory to use per task
+    - mail_type: The mail conditions to use for Slurm
+    - mail_user: The user(s) to send automated Slurm emails to
+    - array: A list containing the Slurm arrays to use. Must be formatted using hyphens (-) to define ranges and commas (,) to define additional values/ranges. This should usually be ["1-5000"] to start.
+    - time_inc: The amount of time to add each time the job fails
+  - sections: The amount of sections to use. [NOTE] THIS WILL LIKELY BE REMOVED
+  - job_dir_name: The directory this job will be run in (the full SCFT 1 directory will end up being main.abs_path/main.name/job_dir_name)
+  - param_path: A path to the PSCF param file to use for SCFT step 1
+  - command_path: A path to the PSCF command file to use for SCFT stpe 1
+  - run_path: A path to an executable script file that runs PSCF
+  - detailed_conv: Whether to print detailed convergence information after all SCFT step 1 calculations have finished.
+  - sec_div: The amount of seconds to divide each timing section into. See [`run_scft.py`](./run_scft.py)'s [`review_csv_timings()`](./run_scft.py#L1338) for more information.
+- scft_2: A JSON object containing information relating to the Slurm job used to run SCFT step 2
+  - slurm: A JSON object containing information relating to the Slurm job used for SCFT step 2
+    - slurm_name: The Slurm job name to use
+    - log_path: An absolute path to write log files to. main.name and the job's ID will be appended to the path
+    - time: The time limit for this job
+    - ntasks: The number of tasks to run
+    - cpus: The number of CPUs to use per task
+    - mem: The memory to use per task
+    - mail_type: The mail conditions to use for Slurm
+    - mail_user: The user(s) to send automated Slurm emails to
+    - array: A list containing the Slurm arrays to use. Must be formatted using hyphens (-) to define ranges and commas (,) to define additional values/ranges. Unless you modify [`auto_running/auto_run.py`](./auto_running/auto_run.py), this parameter will automatically be dynamically overwritten with whichever initial guesses converged through SCFT step 1. Note that this will not _actually_ modify the parameter file.
+    - time_inc: The amount of time to add each time the job fails
+  - sections: The amount of sections to use. [NOTE] THIS WILL LIKELY BE REMOVED
+  - job_dir_name: The directory this job will be run in (the full SCFT 2 directory will end up being main.abs_path/main.name/job_dir_name)
+  - param_path: A path to the PSCF param file to use for SCFT step 2
+  - command_path: A path to the PSCF command file to use for SCFT stpe 2
+  - run_path: A path to an executable script file that runs PSCF
+  - detailed_conv: Whether to print detailed convergence information after all SCFT step 2 calculations have finished.
+  - sec_div: The amount of seconds to divide each timing section into. See [`run_scft.py`](./run_scft.py)'s [`review_csv_timings()`](./run_scft.py#L1338) for more information.
 
 #### Automatic Execution Template Scripts
+In order to allow for the easy creation of scripts and initialization of parameters with little to no modifications, [`auto_running/auto_run.py`](./auto_running/auto_run.py) contains various template Slurm scripts. These scripts, which are mostly derived from the contents of [`run`](./run/), are skeletal in that they have the general structure of the script with several "template parameters". Defined using curly braces ({}) and stylized in all uppercase characters, template parameters serve as the means to tie JSON parameters (see the previous subsection) into actual effects on Slurm scripts. The function `read_template()` from the `Job` and `BranchedJob` objects (see the following section) examines a template Slurm script with a regex, locating all instances of curly braces. The function `create_script()` then applies these to JSON parameters by searching for a parameter key equivalent to the template parameter in all lowercase with its curly braces removed (ex. {CO_GANS_PATH} -> "co_gans_path"). Unfortunately, there are certain times in normal Bash where it is necessary to include curly braces (such as when inserting variables into strings). To create a bypass for these parameter replacements, a bashslash (\\) character may be included anywhere within the curly braces (ex. {PATH\\} and {\\PA\\T\\H} will have the exact same effect, being replaced with just {PATH}). For formatting and readability purposes, it is recommended that you place your bashslashes just before the closing curly brace (ex. {PATH\\}).
 
 #### Modifying Automatic Execution (For Developers)
 This subsection will detail some of the specifics of the code used in the program [`auto_running/auto_run.py`](./auto_running/auto_run.py) with the specific purpose of educating developers on how to modify the code. For a more surface-level overview of the functionality provided by the program, see the previous three subsections.
 Note: This program uses Python's `logging` module to print outputs, as the traditional Python `print()` statement uses a buffered output that  can take a significant amount of time to come through.
 `auto_run.py`contains two classes: `Job` and `BranchedJob`.\
-`Job`\
+
+--- `Job` ---\
 A `Job` object represents a single Slurm job. It may be unscheduled, queued, running, finished, etc. This means that there are certain functions that should only be used when the job is in a certain state. To initialize a `Job` object, you must pass in a string path to the template file to use (see the previous subsection for an overview of the templating format), a dict containing the parameters to use to fill in the template file, a string path stating where to write the filled-in template script to, and a boolean value stating whether or not the `Job` should reschedule itself in the event that it times out. It has the following functions:
 - `print_attrs()`: Prints this `Job` object's instance variables.
 - `read_template()`: Uses a regular expression (regex) to find all properly-formatted template parameters (see the above section for more information on these).
@@ -204,8 +277,14 @@ A `Job` object represents a single Slurm job. It may be unscheduled, queued, run
 - `wait_for_slurm_end()`: Periodically calls `check()`, so as to avoid bogging down Slurm's API. This function is blocking until the Slurm job reaches the `COMPLETED` status. If the Slurm job reaches the `TIMEOUT` state and automatic rescheduling is disabled, the program terminates itself. Otherwise, the program calls `add_reschedule_time()`. Next, it calls `schedule()`. Finally, it recursively calls `wait_for_slurm_end()`. Note: `check()` will automatically terminate the program if the Slurm job ever reaches the `FAILED`, `NODE_FAIL`, or `OUT_OF_MEMORY` status.
 **Developer's Note**: `add_reschedule_time()` currently _actually_ uses a `Job` objects `reschedule_add` attribute, which is automatically initialized from the parameter dict's `"time_add"` parameter when using the default constructor. The `reschedule_add` attribute may be completely replaced with references to `"time_add"` in future versions.\
 
-`BranchedJob`\
+--- `BranchedJob` ---\
 A `BranchedJob` object represents an array Slurm job. Specifically, its intended use is for jobs that require complex rescheduling with very long, specific arrays (> 500 constituents). As there is a limit to how many characters can be used for the `#SBATCH --array` Slurm config, these "jobs" typically must be split into multiple _actual_ Slurm jobs. Despite this, keeping them as individual `Job` objects creates several problems, such as figuring out how to wait for multiple jobs to end at once. 
+UNFINISHED!
+
+--- Helper Functions ---\
+In addition to the capabilities possessed by the `Job` and `BranchedJob` classes, `auto_run.py` also contains some helper methods.
+
+`init_template()`:
 
 
 ## Shell Script Helpers

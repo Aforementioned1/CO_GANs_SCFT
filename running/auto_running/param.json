@@ -56,6 +56,26 @@
         "command_path": "running/first/command",
         "run_path": "running/first/run",
         "detailed_conv": true,
+        "sec_div": 300
+    },
+    "scft_2": {
+        "slurm": {
+            "slurm_name": "CO_SCFT_2",
+            "log_path": "/users/0/mumma026/CO_GANs_SCFT/running",
+            "time": "02:00:00",
+            "ntasks": "1",
+            "cpus": "1",
+            "mem": "1200m",
+            "mail_type": "ALL",
+            "mail_user": "mumma026@umn.edu,holm0994@umn.edu",
+            "time_inc": "01:00:00"
+        },
+        "sections": 1000,
+        "job_dir_name": "scft_2",
+        "param_path": "running/second/param",
+        "command_path": "running/second/command",
+        "run_path": "running/second/run",
+        "detailed_conv": true,
         "sec_div": 3600
     }
 }

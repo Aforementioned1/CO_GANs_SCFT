@@ -536,12 +536,12 @@ def deep_merge(dict_1: dict, dict_2: dict, recursive = False):
                         # print(f"Second {v2}")
                         if isinstance(v2, dict):
                             deeper_merge = True
-                    print(deeper_merge)
+                    # print(deeper_merge)
                     if deeper_merge:
                         out[k] = deep_merge(dict_1[k], v, recursive)
                     else:
-                        print(f"one: {dict_1[k]}")
-                        print(f"two: {v}")
+                        # print(f"one: {dict_1[k]}")
+                        # print(f"two: {v}")
                         out[k] = v | out[k]
                 else:
                     out[k] = v | out[k]
@@ -637,7 +637,7 @@ def scft_1_conv(run_path: Path, param: dict):
         # SUC
         logger.info(f"Finished (total):           {data['suc']}")
         logger.info.info(f"Finished (converged):       {data["conv"]}")
-        print(f"Finished (not converged):   {data["fin"]}")
+        logger.info(f"Finished (not converged):   {data["fin"]}")
         if param['scft_1']['detailed_conv']:
             logger.info(f"Finished (max iterations):  {data['iter']}")
             logger.info(f"Finished (no convergence):  {data['nocv']}")
@@ -653,11 +653,11 @@ def scft_1_conv(run_path: Path, param: dict):
         logger.info(f"Error (no directory):        {data['err']}")
 
 def scft_1_time(run_path: Path, param: dict):
-    print("[HELPER] SCFT_1_TIME (3)")
+    logger.info("[HELPER] SCFT_1_TIME (3)")
     run_scft.review_csv_timings(str(run_path / "data/scft_1.csv"), sec_div = param["scft_1"]["sec_div"], debug = False)
 
 def prep_scft_2(run_path: Path, co_gans_path: Path, param: dict):
-    print("PREP_SCFT_2 (4)")
+    logger.info("PREP_SCFT_2 (4)")
     # read names of each initial guess (should be 1-250) and whether they converged
     names = run_scft.read_csv_col(in_path = str(run_path / "data/scft_1.csv"), 
                                   col = "name", debug = False)
@@ -684,20 +684,20 @@ def prep_scft_2(run_path: Path, co_gans_path: Path, param: dict):
                 run_path =  str(co_gans_path / param['scft_2']['run_path']),
                 debug = False)
 
-    print("FIX_W_BASIS (4.5)")
+    logger.info("FIX_W_BASIS (4.5)")
     # this uses the more advanced save_w_basis_dir() rather than the outdated fix_w_basis_dir()
 
     # fix w.bf files for second SCFT pass
     run_scft.save_w_basis_dir(in_dir = str(run_path / "scft_2"), debug = False)
 
 def scft_2_to_csv(run_path: Path):
-    print("SCFT_2_TO_CSV (5)")
+    logger.info("SCFT_2_TO_CSV (5)")
     # combine data to CSV file
     run_scft.to_csv_num(dir_path = str(run_path / "scft_2"), num_start = 1, num_end = 5000,
                         output = str(run_path / "data/scft_2.csv"), debug = False)
 
 def scft_2_conv(run_path: Path, param: dict):
-    print("SCFT_2_CONV (6)")
+    logger.info("SCFT_2_CONV (6)")
     data = {
         "suc":  0, # all in group SUC
         "conv": 0, # SUC_CONV
@@ -742,22 +742,22 @@ def scft_2_conv(run_path: Path, param: dict):
                 data["err"] += 1
 
     # SUC
-    print(f"Finished (total):           {data['suc']}")
-    print(f"Finished (converged):       {data["conv"]}")
-    print(f"Finished (not converged):   {data["fin"]}")
+    logger.info(f"Finished (total):           {data['suc']}")
+    logger.info(f"Finished (converged):       {data["conv"]}")
+    logger.info(f"Finished (not converged):   {data["fin"]}")
     if param['scft_2']['detailed_conv']:
-        print(f"Finished (max iterations):  {data['iter']}")
-        print(f"Finished (no convergence):  {data['nocv']}")
+        logger.info(f"Finished (max iterations):  {data['iter']}")
+        logger.info(f"Finished (no convergence):  {data['nocv']}")
 
     # WARN
-    print(f"Unfinished (total):         {data['warn']}")
+    logger.warning(f"Unfinished (total):         {data['warn']}")
     if param['scft_2']['detailed_conv']:
-        print(f"Unfinished (no log):        {data['log']}")
-        print(f"Unfinished (no iterations): {data['noit']}")
-        print(f"Unfinished (iterations):    {data['unf']}")
+        logger.warning(f"Unfinished (no log):        {data['log']}")
+        logger.warning(f"Unfinished (no iterations): {data['noit']}")
+        logger.warning(f"Unfinished (iterations):    {data['unf']}")
 
     # ERR
-    print(f"Error (no directory):        {data['err']}")
+    logger.error(f"Error (no directory):        {data['err']}")
 
 def load_params(paths: list[str]):
     """ Attempts to load JSON parameters from all file paths in paths.
@@ -903,5 +903,35 @@ def main():
 
     # get convergence info
     scft_1_conv(run_path, param)
+
+    # prepare for scft step 2
+    prep_scft_2(run_path, co_gans_path, param)
+
+    # use code from print_dirs.py to find which ones are left, in array form
+    scft_2_calcs = scft_array_timeout_check(str(run_path / param['scft_2']['job_dir_name']))
+
+    # initialize SCFT 2 job object
+    # make a dict for the array from scft_2_calcs
+    scft_2_job = BranchedJob(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_2_template.sh",
+                                param['scft_2']['slurm'] | param['scft_2'] | main_param | {"array": scft_2_calcs},
+                                run_path / "scft_multi_2.sh", True)
+
+    # bind the callback function
+    scft_2_job.callback = scft_callback
+
+    # init script (no multi)
+    scft_2_job.create_script()
+
+    # schedule and wait
+    # as this uses the scft_callback function, it will continue rescheduling
+    # unfinished calculations with longer times until none are left
+    scft_2_job.schedule()
+    scft_2_job.wait_for_slurm_end()
+
+    # collect csv data
+    scft_2_to_csv(run_path)
+
+    # get convergence info
+    scft_2_conv(run_path, param)    
 
 # main()
