@@ -282,9 +282,20 @@ A `BranchedJob` object represents an array Slurm job. Specifically, its intended
 UNFINISHED!
 
 --- Helper Functions ---\
-In addition to the capabilities possessed by the `Job` and `BranchedJob` classes, `auto_run.py` also contains some helper methods.
+In addition to the capabilities possessed by the `Job` and `BranchedJob` classes, `auto_run.py` also contains some helper methods. Note that the arguments for each function are omitted for simplicity's sake. Full function constructors, with type annotations and more detailed documentation, can be found inside the actual code of [`auto_running/auto_run.py`](./auto_running/auto_run.py). This code is meant to help explain the general functionalies provided and show where functions are utilized.
 
-`init_template()`:
+`init_template()`: This function takes a string and a dict. It iterates over all items in the dict, replacing each instance of each key in the string with its corresponding value.
+
+`init_template_file()`: This function adds another layer of abstraction to `init_template()` by handling the reading and writing of the original and filled in templates. This is utilized by the `create_script()` method of `Job` and `BranchedJob`.
+
+The following three functions are used for automatic rescheduling of Slurm jobs with longer time limits.
+`str_to_timedelta()`: This function takes a time string formatted like "HH:MM:SS" and converts it into a `datetime.timedelta` object.
+
+`timedelta_to_str()`: This function takes a `datetime.timdelta` object and converts it into a string formatted like "HH:MM:SS".
+
+`add_time_strings()`: This function takes two time strnigs formatted like "HH:MM:SS", temporarily converts them into `datetime.timedelta` objects with `str_to_timedelta()`, adds them together, converts the sum back into a string with `timedelta_to_str()`, and return sthe result.
+
+`deep_merge()`: This function merges two dicts. Any individual keys of dict_1 and dict_2 are preserved, but shared keys preserve only the value of dict_2. Unlike the built-in Python merge (|) operator, this function finds instances of shared keys amongst the two dicts where both values are nested dicts. Instead of only preserving the value of dict_2, as it would with the merge operator, the program merges the two dicts. If recursive is True, the program searches both nested dicts for any duplicate keys with even further nested dicts, properly combining them until the dicts have no more shared dict keys. This is used to allow for passing multiple JSON parameter files without accidentally erasing keys that remain unchanged/not overriden.
 
 
 ## Shell Script Helpers

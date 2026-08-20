@@ -427,21 +427,6 @@ def scft_callback(job: BranchedJob):
     job.schedule()
     job.wait_for_slurm_end()
 
-def run_python(path: str, args: list):
-    command = ["python", path].extend(args)
-    result = subprocess.run(command, capture_output = True, text = True, check = True)
-
-    return result.stdout
-
-def run_slurm(path: str):
-    command = ["sbatch", "--parsable", path]
-    result = subprocess.run(command, capture_output = True, text = True, check = True)
-
-    # strip text to be safe
-    return result.stdout.strip()
-
-
-
 def scft_array_timeout_check(dir: str):
     """ Taken from print_dirs.py """
 
