@@ -7,6 +7,8 @@
   - [Citing this work](#citing-this-work)
   - [Relevant work](#relevant-work)
 - [Getting Started](#getting-started)
+    - [Installation](#installation)
+    - [Virtual Environment Initializer](#virtual-environment-initializer)
     - [Prerequisites](#prerequisites)
     - [Data Downloads](#data-downloads)
 - [Usage](#usage)
@@ -50,10 +52,24 @@ Pengyu Chen, Kevin D. Dorfman, _Gaming self-consistent field theory: Generative 
     - **Visualization of Density Fields:** [Polymer Visual](https://github.com/kdorfmanUMN/polymer_visual).
 ## Getting Started
 
+### Installation
+_This subsection is exclusive to the CO_GANs_SCFT repository fork._
+This CO_GANs_SCFT's code is currently maintained here: [https://github.com/Aforementioned1/CO_GANs_SCFT](https://github.com/Aforementioned1/CO_GANs_SCFT)\
+
+To obtain the source code, run
+`git clone https://github.com/Aforementioned1/CO_GANs_SCFT`\
+Note that this requires you to have previously installed [Git](https://git-scm.com/)
+
+### Virtual Environment Initializer
+_This subsection is exclusive to the CO_GANs_SCFT repository fork._
+The file [`./running/init_venv.sh`](./running/init_venv.sh) contains a Shell Script program that automatically creates a Python virtual environment (venv) and installs all Python packages required by this repository (these can be found in [`requirements.txt`](./requirements.txt)). By default, the script attempts to search for the directory ~/CO_GANs_SCFT, but this can be altered by entering a single command line argument. The program will print an error message and exit the program if the target directory does not exist. It is recommended to run the file via `./init_venv.sh` rather than using `source ./init_venv.sh`, as the terminal (or an existing SSH connection) will be closed if the program exits this way. Also, this program attempts to load the module `python3/3.10.9_anaconda2023.03_libmamba` with the command `module load`. This module is available on the Minnesota Supercomputing Institute (MSI), where much of this fork's testing and usage has been completed, but may not be available on other computers or shared computing networks. Importantly, the original GANs_SCFT code uses some deprecated Python features from 2023, meaning that attempting to use newer versions of Python (greater than or equal to 3.12) will potentially cause an error. Therefore, this script chooses to use Python version 3.10.9.
+
 ### Prerequisites
   ```sh
   pip install -r requirements.txt
   ```
+Note that if you install a virtual environment via the script described in the previous subsection, this command will be automatically run.
+
 ### Data Downloads
 
 Acquire both raw and processed density fields [here](https://hdl.handle.net/11299/257550). 
