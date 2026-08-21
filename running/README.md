@@ -97,9 +97,9 @@ To allow for easy, out of the box usage of the utilities of [`run_scft.py`](./ru
 
 ### Front-Facing Implementation
 The file [`scft_helpers.py`](./scft_helpers.py) provides critical front-facing utilities. The program should typically be run manually, as it requires some command line arguments and many of its functions print outputs. The program has 4 command line flags:
-1. `--step` (`-s`): The step name to run the program with. This parameter is mutually exclusive with `--num`, as they provide the same information. See below for a list of all steps, numbers, and a description of what each does.\
-2. `--num` (`-n`): The step number to run the program with. This parameter is mutually exclusive with `--step`, as they provide the same information. This parameter was added to create a shorthand meant for users that intend to frequently use `scft_helpers.py`. While step numbers are in order of occurance of step names (starting with `HELP` at `-1` and incrementing by 1), these numbers must be learned. Therefore, it is recommended that users stick to `--step` when they first begin using `scft_helpers.py`. See below for a list of all steps, numbers, and a description of what each does.\
-3. `--param` (`-p`): The JSON parameter file to use (see [Front-Facing JSON Parameters](#front-facing-json-parameters) for more information on what parameters are required).\
+1. `--step` (`-s`): The step name to run the program with. This parameter is mutually exclusive with `--num`, as they provide the same information. See below for a list of all steps, numbers, and a description of what each does.
+2. `--num` (`-n`): The step number to run the program with. This parameter is mutually exclusive with `--step`, as they provide the same information. This parameter was added to create a shorthand meant for users that intend to frequently use `scft_helpers.py`. While step numbers are in order of occurance of step names (starting with `HELP` at `-1` and incrementing by 1), these numbers must be learned. Therefore, it is recommended that users stick to `--step` when they first begin using `scft_helpers.py`. See below for a list of all steps, numbers, and a description of what each does.
+3. `--param` (`-p`): The JSON parameter file to use (see [Front-Facing JSON Parameters](#front-facing-json-parameters) for more information on what parameters are required).
 4. `--verbose` (`-v`): Enables debug mode for all `run_scft.py` functions. This flag is not recommended except for debugging uses, as many of `run_scft.py`'s functions print large amounts of text when debug mode is enabled.\
 **Developer's Note**: While the `--param` argument is _necessary_ for the program to run successfully, it is intentionally left as a non-required argument. This is to attempt to account for the case in which a user tries to run `scft_helpers.py` with the `HELP` (`-1`) input. When a user is seeking information on how to use the program/what the code does, they should not be expected to know that a JSON parameter file is required to run the program. Therefore, users _are_ able to execute `scft_helpers.py` without passing in the `--param` argument. If this is the case, the program will automatically halt execution. The code for the `HELP` (`-1`) input is intentionally placed before this halt.\
 \
@@ -120,7 +120,7 @@ UNIQUE_SOLN     8          Print information regarding how many converged soluti
 SCFT_1_CONV_OLD 9          (Deprecated): Print information regarding how many SCFT step 1 calculations converged\
 SCFT_2_CONV_OLD 10         (Deprecated): Print information regarding how many SCFT step 2 calculations converged\
 FIX_W_BASIS_OLD 11         (Deprecated): Fix w.bf files outputted from SCFT step 1 in preparation for SCFT step 2\
----------------------------------------------------------------------------------------------------------------------------------\
+---------------------------------------------------------------------------------------------------------------------------------
 
 To obtain this message, one must run the command `python scft_helpers.py --step HELP` (or `python scft_helpers.py --num -1`) when in the directory [`running`](../running/../running/../running/../running/../running/)
 
@@ -264,7 +264,7 @@ In order to allow for the easy creation of scripts and initialization of paramet
 ### Modifying Automatic Execution (For Developers)
 This subsection will detail some of the specifics of the code used in the program [`auto_running/auto_run.py`](./auto_running/auto_run.py) with the specific purpose of educating developers on how to modify the code. For a more surface-level overview of the functionality provided by the program, see the previous three subsections.
 Note: This program uses Python's `logging` module to print outputs, as the traditional Python `print()` statement uses a buffered output that  can take a significant amount of time to come through.
-`auto_run.py`contains two classes: `Job` and `BranchedJob`.\
+`auto_run.py`contains two classes: `Job` and `BranchedJob`.
 
 --- `Job` ---\
 A `Job` object represents a single Slurm job. It may be unscheduled, queued, running, finished, etc. This means that there are certain functions that should only be used when the job is in a certain state. To initialize a `Job` object, you must pass in a string path to the template file to use (see the previous subsection for an overview of the templating format), a dict containing the parameters to use to fill in the template file, a string path stating where to write the filled-in template script to, and a boolean value stating whether or not the `Job` should reschedule itself in the event that it times out. It has the following functions:
@@ -275,7 +275,7 @@ A `Job` object represents a single Slurm job. It may be unscheduled, queued, run
 - `check()`: Records and reports this `Job`'s current state, using the command `sacct --format=State --noheader -P -j [job_id]`, where [job_id] is this `Job`'s Slurm Job ID. If the job's status is `FAILED`, `NODE_FAIL`, or `OUT_OF_MEMORY`, this function automatically terminates the program. Calling this function before `schedule()` has been called will likely terminate the program.
 - `add_reschedule_time()`: Adds this `Job` object's `"time_add"` parameter to its `"time"` parameter. It also automatically calls `create_script()` to make sure the time duration is actually updated. This is used in `wait_for_slurm_end()` upon timing out, if automatic rescheduling is enabled.
 - `wait_for_slurm_end()`: Periodically calls `check()`, so as to avoid bogging down Slurm's API. This function is blocking until the Slurm job reaches the `COMPLETED` status. If the Slurm job reaches the `TIMEOUT` state and automatic rescheduling is disabled, the program terminates itself. Otherwise, the program calls `add_reschedule_time()`. Next, it calls `schedule()`. Finally, it recursively calls `wait_for_slurm_end()`. Note: `check()` will automatically terminate the program if the Slurm job ever reaches the `FAILED`, `NODE_FAIL`, or `OUT_OF_MEMORY` status.
-**Developer's Note**: `add_reschedule_time()` currently _actually_ uses a `Job` objects `reschedule_add` attribute, which is automatically initialized from the parameter dict's `"time_add"` parameter when using the default constructor. The `reschedule_add` attribute may be completely replaced with references to `"time_add"` in future versions.\
+**Developer's Note**: `add_reschedule_time()` currently _actually_ uses a `Job` objects `reschedule_add` attribute, which is automatically initialized from the parameter dict's `"time_add"` parameter when using the default constructor. The `reschedule_add` attribute may be completely replaced with references to `"time_add"` in future versions.
 
 --- `BranchedJob` ---\
 A `BranchedJob` object represents an array Slurm job. Specifically, its intended use is for jobs that require complex rescheduling with very long, specific arrays (> 500 constituents). As there is a limit to how many characters can be used for the `#SBATCH --array` Slurm config, these "jobs" typically must be split into multiple _actual_ Slurm jobs. Despite this, keeping them as individual `Job` objects creates several problems, such as figuring out how to wait for multiple jobs to end at once. 
@@ -284,17 +284,17 @@ UNFINISHED!
 --- Helper Functions ---\
 In addition to the capabilities possessed by the `Job` and `BranchedJob` classes, `auto_run.py` also contains some helper methods. Note that the arguments for each function are omitted for simplicity's sake. Full function constructors, with type annotations and more detailed documentation, can be found inside the actual code of [`auto_running/auto_run.py`](./auto_running/auto_run.py). This code is meant to help explain the general functionalies provided and show where functions are utilized.
 
-`init_template()`: This function takes a string and a dict. It iterates over all items in the dict, replacing each instance of each key in the string with its corresponding value.\
+`init_template()`: This function takes a string and a dict. It iterates over all items in the dict, replacing each instance of each key in the string with its corresponding value.
 
-`init_template_file()`: This function adds another layer of abstraction to `init_template()` by handling the reading and writing of the original and filled in templates. This is utilized by the `create_script()` method of `Job` and `BranchedJob`.\
+`init_template_file()`: This function adds another layer of abstraction to `init_template()` by handling the reading and writing of the original and filled in templates. This is utilized by the `create_script()` method of `Job` and `BranchedJob`.
 
 The following three functions are used for automatic rescheduling of Slurm jobs with longer time limits.\
-`str_to_timedelta()`: This function takes a time string formatted like "HH:MM:SS" and converts it into a `datetime.timedelta` object.\
+`str_to_timedelta()`: This function takes a time string formatted like "HH:MM:SS" and converts it into a `datetime.timedelta` object.
 
-`timedelta_to_str()`: This function takes a `datetime.timdelta` object and converts it into a string formatted like "HH:MM:SS".\
+`timedelta_to_str()`: This function takes a `datetime.timdelta` object and converts it into a string formatted like "HH:MM:SS".
 
-`add_time_strings()`: This function takes two time strnigs formatted like "HH:MM:SS", temporarily converts them into `datetime.timedelta` objects with `str_to_timedelta()`, adds them together, converts the sum back into a string with `timedelta_to_str()`, and return sthe result.\
+`add_time_strings()`: This function takes two time strnigs formatted like "HH:MM:SS", temporarily converts them into `datetime.timedelta` objects with `str_to_timedelta()`, adds them together, converts the sum back into a string with `timedelta_to_str()`, and return sthe result.
 
-`deep_merge()`: This function merges two dicts. Any individual keys of dict_1 and dict_2 are preserved, but shared keys preserve only the value of dict_2. Unlike the built-in Python merge (|) operator, this function finds instances of shared keys amongst the two dicts where both values are nested dicts. Instead of only preserving the value of dict_2, as it would with the merge operator, the program merges the two dicts. If recursive is True, the program searches both nested dicts for any duplicate keys with even further nested dicts, properly combining them until the dicts have no more shared dict keys. This is used to allow for passing multiple JSON parameter files without accidentally erasing keys that remain unchanged/not overriden.\
+`deep_merge()`: This function merges two dicts. Any individual keys of dict_1 and dict_2 are preserved, but shared keys preserve only the value of dict_2. Unlike the built-in Python merge (|) operator, this function finds instances of shared keys amongst the two dicts where both values are nested dicts. Instead of only preserving the value of dict_2, as it would with the merge operator, the program merges the two dicts. If recursive is True, the program searches both nested dicts for any duplicate keys with even further nested dicts, properly combining them until the dicts have no more shared dict keys. This is used to allow for passing multiple JSON parameter files without accidentally erasing keys that remain unchanged/not overriden.
 
 The rest of this documentation is currently unfinished! Sorry!
