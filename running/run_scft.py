@@ -889,38 +889,17 @@ def execute(in_path: str, adv_checking = True, timing = False, clean_timing = Fa
         # if log exists, go to convergence/iteration checking if enabled
         else:
             if adv_checking:
-                # should only check if not converged and not at max iterations
-                # if enabled, use the same process used in collect to find iterations and convergence
+                # find state category
+                cat = get_state_cat(str(entry))
+
                 if debug:
                     print("Going to advanced checking!")
-                # get text from log file for parsing
-                # log = Path(in_path) / entry.name / "log"
-                log = entry / "log"
-                text = log.read_text()
+                    print(f"State category: {cat}")
 
-                num = -1
-
-                # get iteration number
-                ind = text.rfind("Iteration  ")
-                if ind != -1:
-                    ind += 11
-                    # read up to four digits
-                    # will never be 5, as current iteration limit is set to 2500
-                    # strip whitespace, then cast as int
-                    num = int(text[ind:ind+4].strip())
-                    if debug:
-                        print("Highest iteration:",num)
-                
-                # look for whether it converged
-                converged = False
-                ind = text.rfind("Converged")
-                if ind != -1:
-                    converged = True
-                
-                should_check = (num != max_iterations - 1) and (not converged)
+                # only need to check if category is WARN
+                should_check = cat == "WARN"
                 
                 if debug:
-                    print("Converged:", converged)
                     print("Should check:", should_check)
                 
                 if should_check:
