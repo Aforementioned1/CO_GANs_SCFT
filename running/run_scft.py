@@ -579,7 +579,15 @@ def run(entry: Path, timing = False, debug = False):
     return time_dict
 
 def execute_dir(in_path: str, adv_checking = True, timing = False, clean_timing = False, time_path = "timings.csv", debug = False):
-    """ Executes the run script for every valid directory in in_path.\n
+    """ NOTE: This function is deprecated and will likely be removed soon.
+        This is due to the fact that this function attempts to run SCFT
+        calculations one-at-a-time rather than using parallel processing, which
+        has been determined to be a preferable method. See the file run_one.py
+        (or its slightly more complicated sister run_some.py) and the Slurm scripts
+        run/scft_multi.sh and run/scft_multi_2.sh for an easier way to run SCFT
+        calculations with parallel processing.
+    
+        Executes the run script for every valid directory in in_path.\n
         in_path: A path to a directory with properly initialized subdirectories,
         as per the format specified in prepare_files\n
         adv_checking: Whether advanced checking should be used on subdirectories already
@@ -694,7 +702,15 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, clean_timing 
             print(in_path, "does not exist or is not a directory! Skipping...")
 
 def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing = False, clean_timing = False, time_path = "timings.csv", debug = False):
-    """ Executes the run script for every valid directory in in_path that falls between start and end, inclusive.\n
+    """ NOTE: This function is deprecated and will likely be removed soon.
+        This is due to the fact that this function attempts to run SCFT
+        calculations one-at-a-time rather than using parallel processing, which
+        has been determined to be a preferable method. See the file run_one.py
+        (or its slightly more complicated sister run_some.py) and the Slurm scripts
+        run/scft_multi.sh and run/scft_multi_2.sh for an easier way to run SCFT
+        calculations with parallel processing.
+    
+        Executes the run script for every valid directory in in_path that falls between start and end, inclusive.\n
         in_path: A path to a directory with properly initialized subdirectories with numerical names,
         as per the format specified in prepare_files\n
         start: The number to start at\n
@@ -1679,6 +1695,15 @@ def get_first_in_cluster(groups: dict[str, list[tuple[float, str, str]]]):
 
     return names
 
+def get_first_in_cluster_fe(groups: dict[str, list[tuple[float, str, str]]]):
+    """ Returns the free energy, name, and trial name of the first constituent of every inputted cluster\n
+    groups: The clusters to use"""
+    names = []
+    for d in groups.values():
+        names.append((d[0][0], d[0][1], d[0][2]))
+
+    return names
+
 def copy_files(pre_path: str, files: list[tuple[str, str]], temp_dir: str, name_end = "c.rf", translations = TRANSLATIONS,
                mid_path = "scft_2", post_path = "out/c.rf"):
     for name, trial in files:
@@ -1689,7 +1714,7 @@ def copy_files(pre_path: str, files: list[tuple[str, str]], temp_dir: str, name_
 
         shutil.copy((Path(pre_path) / trial / mid_path / name / post_path).absolute(), (Path(temp_dir) / f"{translation_name}_{name}_{name_end}").absolute())
 
-# print(get_first_in_cluster(improved_uniques(sorted(combine_lists(read_multi_csv(["first_run"])), key = lambda x: x[0]))))
+print(get_first_in_cluster_fe(improved_uniques(sorted(combine_lists(read_multi_csv(["first_run"])), key = lambda x: x[0]))))
 
 # # colors = dynamic_hex_rainbow(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"], 0.5, 1.0, max_clamp = 1.0)
 

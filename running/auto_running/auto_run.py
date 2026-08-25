@@ -12,17 +12,12 @@ from pathlib import Path
 import shutil
 import time
 
-sys.path.append("/home/coasr2026/CO_GANs_SCFT/running") # change to running path
-
-import run_scft
 from datetime import timedelta
 from datetime import datetime
 import re
 
 import logging
 logger = logging.getLogger(__name__)
-
-# JobType = Enum("JobType", "SINGLE SCFT_ARRAY")
 
 def init_template(text: str, replace: dict) -> str:
     """ Replaces all key-value pairs in a provided string.=\n
@@ -793,6 +788,18 @@ def main():
         "co_gans_path": co_gans_path,
         "move_path": move_path
     }
+
+    logger.info("Attempting to load run_scft...")
+    # add path using param file
+    sys.path.append(str(co_gans_path / "CO_GANs_SCFT/running"))
+    logger.info(f"Appended {(co_gans_path / "CO_GANs_SCFT.running")} to Python search path!")
+
+    # make sure other functions can access it
+    global run_scft
+
+    import run_scft
+
+    logger.info("Successfully loaded run_scft!")
 
     # make run directory if it doesnt exist already
     if not run_path.exists():
