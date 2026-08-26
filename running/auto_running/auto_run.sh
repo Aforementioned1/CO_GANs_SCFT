@@ -2,7 +2,7 @@
 #SBATCH --job-name=CO_AUTO_RUN_TEST_1
 #SBATCH --output=/users/0/mumma026/CO_GANs_SCFT/running/auto_running_1/auto_%j.out
 #SBATCH --error=/users/0/mumma026/CO_GANs_SCFT/running/auto_running_1/auto_%j.err
-#SBATCH --time=00:05:00
+#SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=200m

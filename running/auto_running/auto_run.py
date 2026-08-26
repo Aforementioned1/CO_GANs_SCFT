@@ -769,6 +769,11 @@ def load_params(paths: list[str]):
         logger.critical("Ending program...")
         sys.exit()
 
+def write_step(step: int, step_path: Path):
+    step_path.write_text(step)
+
+    return step
+
 def main():
     # load JSON parameters
     # using sys.argv for now
@@ -801,129 +806,173 @@ def main():
 
     logger.info("Successfully loaded run_scft!")
 
-    # make run directory if it doesnt exist already
-    if not run_path.exists():
-        run_path.mkdir(parents = True, exist_ok = True)
+    step = 0
 
-    # copy 
-    shutil.copy(param['data_path'], str(run_path / "data.pt"))
+    if main_param['check_step']:
+        print("Attempting to locate step file...")
+        step_path = (run_path / "step")
+        if step_path.is_file():
+            print("Found step file!")
+            step = int(step_path.read_text())
+            print(f"Step: {step}")
 
-    # init gan train job object
-    train_job = Job(co_gans_path / "CO_GANs_SCFT/running/auto_running/train_template.sh",
-                    param['train']['slurm'] | param['train'] | main_param,
-                    run_path / "train.sh", True)
+        else:
+            print("No step file found. Defaulting to step 0...")
 
-    # init script file with parameters
-    train_job.create_script()
+    # basic init
+    if step == 0:
+        # make run directory if it doesnt exist already
+        if not run_path.exists():
+            run_path.mkdir(parents = True, exist_ok = True)
 
-    # run and wait
-    train_job.schedule()
-    train_job.wait_for_slurm_end()
+        # copy 
+        shutil.copy(param['data_path'], str(run_path / "data.pt"))
 
-    # find latest model file
-    time_sorted_models = sorted([f for f in (run_path / "model").iterdir() if f.is_file()], key = lambda x: x.stat().st_mtime)
-    target_model = ""
+        step = write_step(step + 1, run_path / "step")
 
-    for f in time_sorted_models:
-        if f.name.startswith("Gweights"):
-            logger.info(f"Last modified Gweights file: {f.name}")
-            target_model = f.name
-            break
+    # GAN stuff
+    if step == 1:
+        # init gan train job object
+        train_job = Job(co_gans_path / "CO_GANs_SCFT/running/auto_running/train_template.sh",
+                        param['train']['slurm'] | param['train'] | main_param,
+                        run_path / "train.sh", True)
 
-    if target_model == "":
-        logger.critical("No model found!")
-        logger.critical("Ending program...")
-        sys.exit()
+        # init script file with parameters
+        train_job.create_script()
 
-    logger.info(f"Found model {target_model}!")
-    
-    logger.info("Attempting to generate guesses...")
-    # init generation job object
-    gen_job = Job(co_gans_path / "CO_GANs_SCFT/running/auto_running/generate_template.sh",
-                  param['gen']['slurm'] | param['gen'] | main_param | {"gweights": target_model},
-                  run_path / "generate.sh", True)
+        # run and wait
+        train_job.schedule()
+        train_job.wait_for_slurm_end()
 
-    # init script file with parameters
-    gen_job.create_script()
+        step = write_step(step + 1, run_path / "step")
 
-    # schedule and wait
-    gen_job.schedule()
-    gen_job.wait_for_slurm_end()
+    # locating the model to use + generating guesses
+    if step == 2:
+        # find latest model file
+        time_sorted_models = sorted([f for f in (run_path / "model").iterdir() if f.is_file()], key = lambda x: x.stat().st_mtime)
+        target_model = ""
 
-    logger.info("Successfully generated guesses!")
+        for f in time_sorted_models:
+            if f.name.startswith("Gweights"):
+                logger.info(f"Last modified Gweights file: {f.name}")
+                target_model = f.name
+                break
 
-    # move data.pt and model if enabled
-    if main_param['move']:
-        logger.info("Moving is enabled!!!")
-        logger.info(f"Making directories for move path at {move_path}")
-        move_path.mkdir(parents = True, exist_ok = True)
-        logger.info(f"Moving data.pt ({run_path / 'data.pt'}) to {move_path}")
-        shutil.move(run_path / "data.pt", move_path)
-        logger.info(f"Moving model ({run_path / 'model'}) to {move_path}")
-        shutil.move(run_path / "model", move_path)
+        if target_model == "":
+            logger.critical("No model found!")
+            logger.critical("Ending program...")
+            sys.exit()
 
-    # # NOTE: need to make scft example param file (NOT DONE)
-    # run_python(co_gans_path / "CO_GANs_SCFT/running/scft_example.py", ["-p", (run_path / "example_param.json"), "-s", "PREP_SCFT_1"])
-    
+        logger.info(f"Found model {target_model}!")
+        
+        logger.info("Attempting to generate guesses...")
+        # init generation job object
+        gen_job = Job(co_gans_path / "CO_GANs_SCFT/running/auto_running/generate_template.sh",
+                    param['gen']['slurm'] | param['gen'] | main_param | {"gweights": target_model},
+                    run_path / "generate.sh", True)
+
+        # init script file with parameters
+        gen_job.create_script()
+
+        # schedule and wait
+        gen_job.schedule()
+        gen_job.wait_for_slurm_end()
+
+        logger.info("Successfully generated guesses!")
+
+        # move data.pt and model if enabled
+        if main_param['move']:
+            logger.info("Moving is enabled!!!")
+            logger.info(f"Making directories for move path at {move_path}")
+            move_path.mkdir(parents = True, exist_ok = True)
+            logger.info(f"Moving data.pt ({run_path / 'data.pt'}) to {move_path}")
+            shutil.move(run_path / "data.pt", move_path)
+            logger.info(f"Moving model ({run_path / 'model'}) to {move_path}")
+            shutil.move(run_path / "model", move_path)
+
+        step = write_step(step + 1, run_path / "step")
+
+    # Step 3: init SCFT step 1
+    if step == 3:
     # initialize SCFT step 1 directories
-    prep_scft_1(run_path, co_gans_path, param)
-    
-    # move gan_guesses if enabled
-    if main_param['move']:
-        logger.info(f"Moving gan_guesses ({run_path / 'gan_guesses'}) to {move_path}")
-        shutil.move(run_path / "gan_guesses", move_path)
+        prep_scft_1(run_path, co_gans_path, param)
+        
+        # move gan_guesses if enabled
+        if main_param['move']:
+            logger.info(f"Moving gan_guesses ({run_path / 'gan_guesses'}) to {move_path}")
+            shutil.move(run_path / "gan_guesses", move_path)
 
-    # initialize SCFT 1 job object
-    scft_1_job = BranchedJob(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_template.sh",
-                             param['scft_1']['slurm'] | param['scft_1'] | main_param,
-                             run_path / "scft_multi.sh", True)
+        step = write_step(step + 1, run_path / "step")
 
-    # bind the callback function
-    scft_1_job.callback = scft_callback
+    # Step 4: Run SCFT step 1
+    if step == 4:
+        # initialize SCFT 1 job object
+        scft_1_job = BranchedJob(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_template.sh",
+                                param['scft_1']['slurm'] | param['scft_1'] | main_param,
+                                run_path / "scft_multi.sh", True)
 
-    # init script (no multi)
-    scft_1_job.create_script()
+        # bind the callback function
+        scft_1_job.callback = scft_callback
 
-    # schedule and wait
-    # as this uses the scft_callback function, it will continue rescheduling
-    # unfinished calculations with longer times until none are left
-    scft_1_job.schedule()
-    scft_1_job.wait_for_slurm_end()
+        # init script (no multi)
+        scft_1_job.create_script()
 
-    # collect csv data
-    scft_1_to_csv(run_path)
+        # schedule and wait
+        # as this uses the scft_callback function, it will continue rescheduling
+        # unfinished calculations with longer times until none are left
+        scft_1_job.schedule()
+        scft_1_job.wait_for_slurm_end()
 
-    # get convergence info
-    scft_1_conv(run_path, param)
+        step = write_step(step + 1, run_path / "step")
 
-    # prepare for scft step 2
-    prep_scft_2(run_path, co_gans_path, param)
+    # Step 5: Collect SCFT step 1 data
+    if step == 5:
+        # collect csv data
+        scft_1_to_csv(run_path)
 
-    # use code from print_dirs.py to find which ones are left, in array form
-    scft_2_calcs = scft_array_timeout_check(str(run_path / param['scft_2']['job_dir_name']))
+        # get convergence info
+        scft_1_conv(run_path, param)
 
-    # initialize SCFT 2 job object
-    # make a dict for the array from scft_2_calcs
-    scft_2_job = BranchedJob(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_2_template.sh",
-                                param['scft_2']['slurm'] | param['scft_2'] | main_param | {"array": scft_2_calcs},
-                                run_path / "scft_multi_2.sh", True)
+    # Step 6: Prepare SCFT step 2
+    if step == 6:
+        # prepare for scft step 2
+        prep_scft_2(run_path, co_gans_path, param)
 
-    # bind the callback function
-    scft_2_job.callback = scft_callback
+        step = write_step(step + 1, run_path / "step")
 
-    # init script (no multi)
-    scft_2_job.create_script()
+    # Step 7: Run SCFT step 2
+    if step == 7:
+        # use code from print_dirs.py to find which ones are left, in array form
+        scft_2_calcs = scft_array_timeout_check(str(run_path / param['scft_2']['job_dir_name']))
 
-    # schedule and wait
-    # as this uses the scft_callback function, it will continue rescheduling
-    # unfinished calculations with longer times until none are left
-    scft_2_job.schedule()
-    scft_2_job.wait_for_slurm_end()
+        # initialize SCFT 2 job object
+        # make a dict for the array from scft_2_calcs
+        scft_2_job = BranchedJob(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_2_template.sh",
+                                    param['scft_2']['slurm'] | param['scft_2'] | main_param | {"array": scft_2_calcs},
+                                    run_path / "scft_multi_2.sh", True)
 
-    # collect csv data
-    scft_2_to_csv(run_path)
+        # bind the callback function
+        scft_2_job.callback = scft_callback
 
-    # get convergence info
-    scft_2_conv(run_path, param)    
+        # init script (no multi)
+        scft_2_job.create_script()
 
-# main()
+        # schedule and wait
+        # as this uses the scft_callback function, it will continue rescheduling
+        # unfinished calculations with longer times until none are left
+        scft_2_job.schedule()
+        scft_2_job.wait_for_slurm_end()
+
+        step = write_step(step + 1, run_path / "step")
+
+    # Step 8: Collect SCFT step 2 data
+    if step == 8:
+        # collect csv data
+        scft_2_to_csv(run_path)
+
+        # get convergence info
+        scft_2_conv(run_path, param)
+
+        step = write_step(step + 1, run_path / "step")   
+
+main()
