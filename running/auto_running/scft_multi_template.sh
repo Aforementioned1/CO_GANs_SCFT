@@ -31,7 +31,7 @@ module load cuda
 source {CO_GANS_PATH}/CO_GANs_SCFT/.venv/bin/activate
 
 # do scft stuff
-# python run_some.py -d {ABS_PATH}/{NAME}/scft_1 -n $SLURM_ARRAY_TASK_ID -t {ABS_PATH}/{NAME}/data/scft_1_timings.csv -s {SEC_SIZE}
+# python run_some.py -d {ABS_PATH\}/{NAME\}/scft_1 -n $SLURM_ARRAY_TASK_ID -t {ABS_PATH\}/{NAME\}/data/scft_1_timings.csv -s {SEC_SIZE\}
 
 python run_one.py {ABS_PATH}/{NAME}/{JOB_DIR_NAME}/$SLURM_ARRAY_TASK_ID {ABS_PATH}/{NAME}/data/{JOB_DIR_NAME}_timings.csv
 
