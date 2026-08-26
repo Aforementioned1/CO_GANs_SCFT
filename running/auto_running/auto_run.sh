@@ -1,7 +1,7 @@
 #!/bin/bash -l
-#SBATCH --job-name=CO_AUTO_RUN_TEST_1
-#SBATCH --output=/users/0/mumma026/CO_GANs_SCFT/running/auto_running_1/auto_%j.out
-#SBATCH --error=/users/0/mumma026/CO_GANs_SCFT/running/auto_running_1/auto_%j.err
+#SBATCH --job-name=CO_AUTO_RUN_14
+#SBATCH --output=/projects/standard/dorfmank/shared/mumma026_holm0994/trial_14/auto_%j.out
+#SBATCH --error=/projects/standard/dorfmank/shared/mumma026_holm0994/trial_14/auto_%j.err
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1

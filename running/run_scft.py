@@ -1693,7 +1693,7 @@ def copy_files(pre_path: str, files: list[tuple[str, str]], temp_dir: str, name_
 
         shutil.copy((Path(pre_path) / trial / mid_path / name / post_path).absolute(), (Path(temp_dir) / f"{translation_name}_{name}_{name_end}").absolute())
 
-print(get_first_in_cluster_fe(improved_uniques(sorted(combine_lists(read_multi_csv(["first_run"])), key = lambda x: x[0]))))
+# print(get_first_in_cluster_fe(improved_uniques(sorted(combine_lists(read_multi_csv(["first_run"])), key = lambda x: x[0]))))
 
 # # colors = dynamic_hex_rainbow(["first_run", "second_run", "third_run", "fourth_run", "eighth_run", "ninth_run", "tenth_run", "eleventh_run", "twelfth_run", "thirteenth_run"], 0.5, 1.0, max_clamp = 1.0)
 
