@@ -990,8 +990,8 @@ def main():
 
         step = write_step(step + 1, run_path / "step")   
 
-# main()
+main()
 
-logging.basicConfig(level = logging.INFO, filename = "test.txt", format='%(asctime)s [%(levelname)s] %(message)s')
+# logging.basicConfig(level = logging.INFO, filename = "test.txt", format='%(asctime)s [%(levelname)s] %(message)s')
 
-print(load_params(["param.json", "custom.json"])['scft_1'])
+# print(load_params(["param.json", "custom.json"])['scft_1'])
