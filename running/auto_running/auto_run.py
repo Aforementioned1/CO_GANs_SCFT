@@ -176,7 +176,7 @@ class Job:
     
         # strip text to be safe
         self.job_id = result.stdout.strip()
-        logger.info(f"Result: {result.stdout} | Job ID: {self.job_id}")
+        logger.info(f"Result: {result.stdout.strip()} | Job ID: {self.job_id}")
 
         return self.job_id
 
@@ -776,7 +776,7 @@ def load_params(paths: list[str]):
 
 def write_step(step: int, step_path: Path):
     logger.info(f"Updating step to {step}")
-    step_path.write_text(step)
+    step_path.write_text(str(step))
 
     return step
 
