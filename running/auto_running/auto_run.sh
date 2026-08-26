@@ -18,7 +18,7 @@ source /users/0/mumma026/CO_GANs_SCFT/.venv/bin/activate
 cd /users/0/mumma026/CO_GANs_SCFT/running/auto_running
 
 # generate guesses (could maybe be done outside of a job)
-python auto_run.py log.txt param.json custom.json
+python auto_run.py /projects/standard/dorfmank/shared/mumma026_holm0994/trial_14/log.txt param.json custom.json
 
 # deactivate venv after to be safe
 deactivate

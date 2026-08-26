@@ -508,26 +508,28 @@ def deep_merge(dict_1: dict, dict_2: dict, recursive = False):
         if k in dict_1:
             if isinstance(v, dict) and isinstance(dict_1[k], dict):
                 if recursive:
-                    deeper_merge = False
+                    # deeper_merge = True
 
-                    for v2 in v.values():
-                        # print(f"First {v2}")
-                        if isinstance(v2, dict):
-                            deeper_merge = True
-                    for v2 in dict_1[k].values():
-                        # print(f"Second {v2}")
-                        if isinstance(v2, dict):
-                            deeper_merge = True
-                    if deeper_merge:
-                        out[k] = deep_merge(dict_1[k], v, recursive)
-                    else:
-                        # print(f"one: {dict_1[k]}")
-                        # print(f"two: {v}")
-                        out[k] = v | out[k]
+                    # for v2 in v.values():
+                    #     # print(f"First {v2}")
+                    #     if isinstance(v2, dict):
+                    #         deeper_merge = True
+                    # for v2 in dict_1[k].values():
+                    #     # print(f"Second {v2}")
+                    #     if isinstance(v2, dict):
+                    #         deeper_merge = True
+                    # if deeper_merge:
+                    out[k] = deep_merge(dict_1[k], v, recursive)
+                    # else:
+                    #     # print(f"one: {dict_1[k]}")
+                    #     # print(f"two: {v}")
+                    #     out[k] = out[k] | v
                 else:
-                    out[k] = v | out[k]
+                    out[k] = out[k] | v
             else:
                 out[k] = v
+        else:
+            out[k] = v
 
     return out
 
@@ -759,8 +761,6 @@ def load_params(paths: list[str]):
             with open(p, "r") as f:
                 params.append(json.load(f))
 
-        params.reverse()
-
         param = params[0]
 
         for p in params:
@@ -990,8 +990,8 @@ def main():
 
         step = write_step(step + 1, run_path / "step")   
 
-main()
+# main()
 
-# logging.basicConfig(level = logging.INFO, filename = "test.txt", format='%(asctime)s [%(levelname)s] %(message)s')
+logging.basicConfig(level = logging.INFO, filename = "test.txt", format='%(asctime)s [%(levelname)s] %(message)s')
 
-# print(load_params(["param.json", "custom.json"]))
+print(load_params(["param.json", "custom.json"])['scft_1'])
