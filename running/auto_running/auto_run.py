@@ -500,6 +500,8 @@ def deep_merge(dict_1: dict, dict_2: dict, recursive = False):
     dict_1: The dict to merge two\n
     dict_2: The dict to merge with dict_1\n
     recursive: Whether to recursively search for further nested dicts"""
+    # logger.info(f"dict_1: {dict_1}")
+    # logger.info(f"dict_2: {dict_2}")
     out = dict_1.copy()
 
     for k, v in dict_2.items():
@@ -516,7 +518,6 @@ def deep_merge(dict_1: dict, dict_2: dict, recursive = False):
                         # print(f"Second {v2}")
                         if isinstance(v2, dict):
                             deeper_merge = True
-                    # print(deeper_merge)
                     if deeper_merge:
                         out[k] = deep_merge(dict_1[k], v, recursive)
                     else:
@@ -527,6 +528,8 @@ def deep_merge(dict_1: dict, dict_2: dict, recursive = False):
                     out[k] = v | out[k]
             else:
                 out[k] = v
+
+    return out
 
 ### scft_helpers.py functions
 
@@ -616,8 +619,8 @@ def scft_1_conv(run_path: Path, param: dict):
     
         # SUC
         logger.info(f"Finished (total):           {data['suc']}")
-        logger.info.info(f"Finished (converged):       {data["conv"]}")
-        logger.info(f"Finished (not converged):   {data["fin"]}")
+        logger.info(f"Finished (converged):       {data['conv']}")
+        logger.info(f"Finished (not converged):   {data['fin']}")
         if param['scft_1']['detailed_conv']:
             logger.info(f"Finished (max iterations):  {data['iter']}")
             logger.info(f"Finished (no convergence):  {data['nocv']}")
@@ -723,8 +726,8 @@ def scft_2_conv(run_path: Path, param: dict):
 
     # SUC
     logger.info(f"Finished (total):           {data['suc']}")
-    logger.info(f"Finished (converged):       {data["conv"]}")
-    logger.info(f"Finished (not converged):   {data["fin"]}")
+    logger.info(f"Finished (converged):       {data['conv']}")
+    logger.info(f"Finished (not converged):   {data['fin']}")
     if param['scft_2']['detailed_conv']:
         logger.info(f"Finished (max iterations):  {data['iter']}")
         logger.info(f"Finished (no convergence):  {data['nocv']}")
@@ -756,6 +759,8 @@ def load_params(paths: list[str]):
             with open(p, "r") as f:
                 params.append(json.load(f))
 
+        params.reverse()
+
         param = params[0]
 
         for p in params:
@@ -770,6 +775,7 @@ def load_params(paths: list[str]):
         sys.exit()
 
 def write_step(step: int, step_path: Path):
+    logger.info(f"Updating step to {step}")
     step_path.write_text(step)
 
     return step
@@ -797,7 +803,7 @@ def main():
     logger.info("Attempting to load run_scft...")
     # add path using param file
     sys.path.append(str(co_gans_path / "CO_GANs_SCFT/running"))
-    logger.info(f"Appended {(co_gans_path / "CO_GANs_SCFT.running")} to Python search path!")
+    logger.info(f"Appended {(co_gans_path / 'CO_GANs_SCFT.running')} to Python search path!")
 
     # make sure other functions can access it
     global run_scft
@@ -809,15 +815,15 @@ def main():
     step = 0
 
     if main_param['check_step']:
-        print("Attempting to locate step file...")
+        logger.info("Attempting to locate step file...")
         step_path = (run_path / "step")
         if step_path.is_file():
-            print("Found step file!")
+            logger.info("Found step file!")
             step = int(step_path.read_text())
-            print(f"Step: {step}")
+            logger.info(f"Step: {step}")
 
         else:
-            print("No step file found. Defaulting to step 0...")
+            logger.info("No step file found. Defaulting to step 0...")
 
     # basic init
     if step == 0:
@@ -975,4 +981,8 @@ def main():
 
         step = write_step(step + 1, run_path / "step")   
 
-main()
+# main()
+
+logging.basicConfig(level = logging.INFO, filename = "test.txt", format='%(asctime)s [%(levelname)s] %(message)s')
+
+print(load_params(["param.json", "custom.json"]))

@@ -1,0 +1,31 @@
+{
+    "main": {
+        "name": "trial_14",
+        "abs_path": "/projects/standard/dorfmank/shared/mumma026_holm0994",
+        "co_gans_path": "/users/0/mumma026",
+        "move": false,
+        "check_step": true
+    },
+    "data_path": "/users/0/mumma026/CO_GANs_SCFT/running/run/data.pt",
+    "train": {
+        "slurm": {
+            "log_path": "/projects/standard/dorfmank/shared/mumma026_holm0994"
+        }
+    },
+    "gen": {
+        "slurm": {
+            "log_path": "/projects/standard/dorfmank/shared/mumma026_holm0994"
+        }
+    },
+    "scft_1": {
+        "slurm": {
+            "log_path": "/projects/standard/dorfmank/shared/mumma026_holm0994",
+            "array": ["1-5000"]
+        }
+    },
+    "scft_2": {
+        "slurm": {
+            "log_path": "/projects/standard/dorfmank/shared/mumma026_holm0994"
+        }
+    }
+}
