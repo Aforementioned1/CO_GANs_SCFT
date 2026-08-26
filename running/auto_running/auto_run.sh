@@ -15,10 +15,10 @@
 # make sure to load venv!!!
 source /users/0/mumma026/CO_GANs_SCFT/.venv/bin/activate
 
-cd /users/0/mumma026/CO_GANs_SCFT/running/auto_running_1
+cd /users/0/mumma026/CO_GANs_SCFT/running/auto_running
 
 # generate guesses (could maybe be done outside of a job)
-python auto_run.py param.json
+python auto_run.py log.txt param.json custom.json
 
 # deactivate venv after to be safe
 deactivate

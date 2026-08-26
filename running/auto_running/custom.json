@@ -15,7 +15,9 @@
     "gen": {
         "slurm": {
             "log_path": "/projects/standard/dorfmank/shared/mumma026_holm0994"
-        }
+        },
+        "use_absolute_model": true,
+        "absolute_model_path": "/projects/standard/dorfmank/shared/mumma026_holm0994/trial_14/model/Gweights_59_142.pt"
     },
     "scft_1": {
         "slurm": {

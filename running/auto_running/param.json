@@ -36,7 +36,9 @@
             "mail_type": "ALL",
             "mail_user": "mumma026@umn.edu,holm0994@umn.edu",
             "time_inc": "00:15:00"
-        }
+        },
+        "use_absolute_model": false,
+        "absolute_model_path": "blank.pt"
     },
     "scft_1": {
         "slurm": {

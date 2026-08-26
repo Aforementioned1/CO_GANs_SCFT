@@ -854,15 +854,24 @@ def main():
 
     # locating the model to use + generating guesses
     if step == 2:
-        # find latest model file
-        time_sorted_models = sorted([f for f in (run_path / "model").iterdir() if f.is_file()], key = lambda x: x.stat().st_mtime)
-        target_model = ""
+        # use manually inputted model if enabled
+        if param['gen']['use_absolute_model']:
+            logger.info("Absolute model usage is enabled!")
+            logger.info("Attempting to load from param...")
+            target_model = param['gen']['absolute_model_path']
 
-        for f in time_sorted_models:
-            if f.name.startswith("Gweights"):
-                logger.info(f"Last modified Gweights file: {f.name}")
-                target_model = f.name
-                break
+        else:
+            logger.info("Absolute model usage is disabled!")
+            logger.info("Attempting to search for most recently modified Gweights file...")
+            # find latest model file
+            time_sorted_models = sorted([f for f in (run_path / "model").iterdir() if f.is_file()], key = lambda x: x.stat().st_mtime)
+            target_model = ""
+
+            for f in time_sorted_models:
+                if f.name.startswith("Gweights"):
+                    logger.info(f"Last modified Gweights file: {f.name}")
+                    target_model = f.name
+                    break
 
         if target_model == "":
             logger.critical("No model found!")
@@ -981,8 +990,8 @@ def main():
 
         step = write_step(step + 1, run_path / "step")   
 
-# main()
+main()
 
-logging.basicConfig(level = logging.INFO, filename = "test.txt", format='%(asctime)s [%(levelname)s] %(message)s')
+# logging.basicConfig(level = logging.INFO, filename = "test.txt", format='%(asctime)s [%(levelname)s] %(message)s')
 
-print(load_params(["param.json", "custom.json"]))
+# print(load_params(["param.json", "custom.json"]))
