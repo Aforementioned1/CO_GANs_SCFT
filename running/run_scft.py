@@ -405,7 +405,7 @@ def save_w_basis(in_dir: str, names: list[str], sub_name = "w.bf", debug = False
 def save_w_basis_dir(in_dir: str, numerical = True, sub_name = "w.bf", debug = False):
     in_path = Path(in_dir)
 
-    for n in sorted(in_dir.iterdir(), key = lambda d: int(d.stem) if numerical else d):
+    for n in sorted(in_path.iterdir(), key = lambda d: int(d.stem) if numerical else d):
         with open((in_path / n / sub_name).absolute(), "r") as f:
             # read as lines for easier processing
             lines = f.readlines()
