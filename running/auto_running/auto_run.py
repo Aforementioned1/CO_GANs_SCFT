@@ -668,7 +668,7 @@ def scft_1_conv(run_path: Path, param: dict):
         logger.info(f"Unfinished (iterations):    {data['unf']}")
 
     # ERR
-    logger.info(f"Error (no directory):        {data['err']}")
+    logger.info(f"Error (no directory):       {data['err']}")
 
 def scft_1_time(run_path: Path, param: dict):
     logger.info("[HELPER] SCFT_1_TIME (3)")
@@ -697,9 +697,9 @@ def prep_scft_2(run_path: Path, co_gans_path: Path, param: dict):
     # scft_2's in should be the same as scft_1's out, but decided to make separate param
     run_scft.prepare_files_second(in_path = str(run_path / "scft_1"), dir_names = conv_names,
                 out_path = str(run_path / "scft_2"),
-                param_path = str(co_gans_path / param['scft_2']['param_path']),
-                command_path = str(co_gans_path / param['scft_2']['command_path']),
-                run_path =  str(co_gans_path / param['scft_2']['run_path']),
+                param_path = str(co_gans_path / "CO_GANs_SCFT" / param['scft_2']['param_path']),
+                command_path = str(co_gans_path / "CO_GANs_SCFT" / param['scft_2']['command_path']),
+                run_path =  str(co_gans_path / "CO_GANs_SCFT" / param['scft_2']['run_path']),
                 debug = False)
 
     logger.info("FIX_W_BASIS (4.5)")
