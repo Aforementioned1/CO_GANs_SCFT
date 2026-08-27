@@ -23,7 +23,8 @@
         "slurm": {
             "log_path": "/projects/standard/dorfmank/shared/mumma026_holm0994",
             "array": ["1-5000"]
-        }
+        },
+        "callback_first": true
     },
     "scft_2": {
         "slurm": {

@@ -332,9 +332,54 @@ class BranchedJob(Job):
             logger.info(f"Attempting to view job {j} (branch index {i})'s status...")
 
             command = ["sacct", "--format=State", "--noheader", "-P", "-j", j]
+            # this will return a line for each array job
             result = subprocess.run(command, capture_output = True, text = True, check = True)
-        
-            code = result.stdout.splitlines()[0]
+
+            code = "UNKNOWN"
+
+            all_run = True
+            all_pend = True
+            all_done = True
+
+            for c in result.stdout.splitlines():
+                # automatically exit if smth bad happens
+                if c == "FAILED":
+                    logger.critical(f"Slurm job {j} (branch index {i}) has a constituent that ended with state FAILED!")
+                    logger.critical("Ending process...")
+                    sys.exit()
+            
+                if c == "NODE_FAIL":
+                    logger.critical(f"Slurm job {j} (branch index {i}) has a constituent that ended with state NODE_FAIL!")
+                    logger.critical("Ending process...")
+                    sys.exit()
+            
+                if c == "OUT_OF_MEMORY":
+                    logger.critical(f"Slurm job {j} (branch index {i}) has a constituent that ended with state OUT_OF_MEMORY!")
+                    logger.critical("Ending process...")
+                    sys.exit()
+
+                if c == "PENDING":
+                    all_run = False
+
+                if c == "RUNNING":
+                    all_pend = False
+
+                if c != "TIMEOUT" or c != "COMPLETED":
+                    all_done = False
+
+            if all_pend:
+                code = "PENDING"
+
+            elif all_run:
+                code = "RUNNING"
+
+            elif all_done:
+                code = "TIMEOUT"
+
+            else:
+                code = "PENDING_OR_RUNNING"
+
+            # code = result.stdout.splitlines()[0]
             logger.info(f"Job {j} (branch index {i})'s code: {code}")
 
             # make sure to append it instead of setting the
@@ -347,21 +392,7 @@ class BranchedJob(Job):
                     logger.warning(f"Code {code} not added to index {i} of statuses (job {j}, branch index {i}).")
             logger.info(f"Added code {code} to statuses!")
         
-            # automatically exit if smth bad happens
-            if code == "FAILED":
-                logger.critical(f"Slurm job {j} (branch index {i}) ended with state FAILED!")
-                logger.critical("Ending process...")
-                sys.exit()
-        
-            if code == "NODE_FAIL":
-                logger.critical(f"Slurm job {j} (branch index {i}) ended with state NODE_FAIL!")
-                logger.critical("Ending process...")
-                sys.exit()
-        
-            if code == "OUT_OF_MEMORY":
-                logger.critical(f"Slurm job {j} (branch index {i}) ended with state OUT_OF_MEMORY!")
-                logger.critical("Ending process...")
-                sys.exit()
+            
         
         return self.statuses
 
@@ -379,11 +410,12 @@ class BranchedJob(Job):
         finished = False
 
         while not finished:
+            finished = True
             codes = self.check()
             for c in codes:
                 # iterate over all codes to see if theyre done
                 if not (c == "COMPLETED" or c == "TIMEOUT"):
-                    finished = True
+                    finished = False
 
             time.sleep(period)
 
@@ -410,17 +442,19 @@ def scft_callback(job: BranchedJob):
     # override existing arrays
     job.param['array'] = left
 
-    # prepare parameters for next run to be safe
-    job.timeouts += 1
-    job.job_ids = []
-    job.statuses = []
+    # only keep going if there's actually stuff to run
+    if len(job.param['array']) > 0:
+        # prepare parameters for next run to be safe
+        job.timeouts += 1
+        job.job_ids = []
+        job.statuses = []
 
-    # make sure to increase time!!!
-    job.add_reschedule_time()
-
-    # schedule and wait
-    job.schedule()
-    job.wait_for_slurm_end()
+        # make sure to increase time!!!
+        job.add_reschedule_time()
+    
+        # schedule and wait
+        job.schedule()
+        job.wait_for_slurm_end()
 
 def scft_array_timeout_check(dir: str):
     """ Taken from print_dirs.py """
@@ -548,12 +582,12 @@ def prep_scft_1(run_path: Path, co_gans_path: Path, param: dict):
         respectively, from co_gans_path"""
     logger.info("[HELPER] PREP_SCFT_1 (0)")
     # prepare files
-    run_scft.prepare_files(in_path = str(run_path / "gan_guessees"),
+    run_scft.prepare_files(in_path = str(run_path / "gan_guesses"),
             out_path = str(run_path / "scft_1"),
             out_name = "rgrid.rf",
-            param_path = str(co_gans_path / param['scft_1']['param_path']),
-            command_path = str(co_gans_path / param['scft_1']['command_path']),
-            run_path =  str(co_gans_path / param['scft_1']['run_path']),
+            param_path = str(co_gans_path / "CO_GANs_SCFT" / param['scft_1']['param_path']),
+            command_path = str(co_gans_path / "CO_GANs_SCFT" / param['scft_1']['command_path']),
+            run_path =  str(co_gans_path / "CO_GANs_SCFT" / param['scft_1']['run_path']),
             debug = False)
 
 def scft_1_to_csv(run_path: Path):
@@ -929,14 +963,19 @@ def main():
         # bind the callback function
         scft_1_job.callback = scft_callback
 
-        # init script (no multi)
-        scft_1_job.create_script()
+        if param['scft_1']['callback_first']:
+            # if enabled, go straight to callback
+            scft_1_job.callback()
 
-        # schedule and wait
-        # as this uses the scft_callback function, it will continue rescheduling
-        # unfinished calculations with longer times until none are left
-        scft_1_job.schedule()
-        scft_1_job.wait_for_slurm_end()
+        else:
+            # init script (no multi)
+            scft_1_job.create_script()
+
+            # schedule and wait
+            # as this uses the scft_callback function, it will continue rescheduling
+            # unfinished calculations with longer times until none are left
+            scft_1_job.schedule()
+            scft_1_job.wait_for_slurm_end()
 
         step = write_step(step + 1, run_path / "step")
 
