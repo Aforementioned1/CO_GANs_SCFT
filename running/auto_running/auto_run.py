@@ -652,23 +652,23 @@ def scft_1_conv(run_path: Path, param: dict):
             case "ERR_NO_DIR":
                 data["err"] += 1
     
-        # SUC
-        logger.info(f"Finished (total):           {data['suc']}")
-        logger.info(f"Finished (converged):       {data['conv']}")
-        logger.info(f"Finished (not converged):   {data['fin']}")
-        if param['scft_1']['detailed_conv']:
-            logger.info(f"Finished (max iterations):  {data['iter']}")
-            logger.info(f"Finished (no convergence):  {data['nocv']}")
-    
-        # WARN
-        logger.info(f"Unfinished (total):         {data['warn']}")
-        if param['scft_1']['detailed_conv']:
-            logger.info(f"Unfinished (no log):        {data['log']}")
-            logger.info(f"Unfinished (no iterations): {data['noit']}")
-            logger.info(f"Unfinished (iterations):    {data['unf']}")
-    
-        # ERR
-        logger.info(f"Error (no directory):        {data['err']}")
+    # SUC
+    logger.info(f"Finished (total):           {data['suc']}")
+    logger.info(f"Finished (converged):       {data['conv']}")
+    logger.info(f"Finished (not converged):   {data['fin']}")
+    if param['scft_1']['detailed_conv']:
+        logger.info(f"Finished (max iterations):  {data['iter']}")
+        logger.info(f"Finished (no convergence):  {data['nocv']}")
+
+    # WARN
+    logger.info(f"Unfinished (total):         {data['warn']}")
+    if param['scft_1']['detailed_conv']:
+        logger.info(f"Unfinished (no log):        {data['log']}")
+        logger.info(f"Unfinished (no iterations): {data['noit']}")
+        logger.info(f"Unfinished (iterations):    {data['unf']}")
+
+    # ERR
+    logger.info(f"Error (no directory):        {data['err']}")
 
 def scft_1_time(run_path: Path, param: dict):
     logger.info("[HELPER] SCFT_1_TIME (3)")
@@ -985,6 +985,8 @@ def main():
 
         # get convergence info
         scft_1_conv(run_path, param)
+
+        step = write_step(step + 1, run_path / "step")
 
     # Step 6: Prepare SCFT step 2
     if step == 6:
