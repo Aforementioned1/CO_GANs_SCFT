@@ -364,17 +364,17 @@ class BranchedJob(Job):
                 if c == "RUNNING":
                     all_pend = False
 
-                if c != "TIMEOUT" or c != "COMPLETED":
+                if c != "TIMEOUT" and c != "COMPLETED":
                     all_done = False
 
-            if all_pend:
+            if all_done:
+                code = "TIMEOUT"
+
+            elif all_pend:
                 code = "PENDING"
 
             elif all_run:
                 code = "RUNNING"
-
-            elif all_done:
-                code = "TIMEOUT"
 
             else:
                 code = "PENDING_OR_RUNNING"
@@ -442,19 +442,17 @@ def scft_callback(job: BranchedJob):
     # override existing arrays
     job.param['array'] = left
 
-    # only keep going if there's actually stuff to run
-    if len(job.param['array']) > 0:
-        # prepare parameters for next run to be safe
-        job.timeouts += 1
-        job.job_ids = []
-        job.statuses = []
+    # prepare parameters for next run to be safe
+    job.timeouts += 1
+    job.job_ids = []
+    job.statuses = []
 
-        # make sure to increase time!!!
-        job.add_reschedule_time()
-    
-        # schedule and wait
-        job.schedule()
-        job.wait_for_slurm_end()
+    # make sure to increase time!!!
+    job.add_reschedule_time()
+
+    # schedule and wait
+    job.schedule()
+    job.wait_for_slurm_end()
 
 def scft_array_timeout_check(dir: str):
     """ Taken from print_dirs.py """
@@ -511,7 +509,8 @@ def scft_array_timeout_check(dir: str):
         else:
             logger.error(f"{d.name} is not a directory!")
 
-    out_strs.append(out_str.rstrip(","))
+    if out_str != "":
+        out_strs.append(out_str.rstrip(","))
     total_dirs += dir_amt
 
     if len(out_str) > 1:
@@ -965,7 +964,7 @@ def main():
 
         if param['scft_1']['callback_first']:
             # if enabled, go straight to callback
-            scft_1_job.callback()
+            scft_1_job.callback(scft_1_job)
 
         else:
             # init script (no multi)
