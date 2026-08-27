@@ -280,10 +280,10 @@ class BranchedJob(Job):
         for i, a in enumerate(self.param['array']):
             logger.info(f"Attempting to schedule job {i}...")
             logger.info(f"Prepping specific template...")
-            init_template_file(f"{self.slurm_path.replace('.sh', '')}_no_array.sh", f"{self.slurm_path.replace('.sh', '')}_{i}.sh", {"{ARRAY}": a})
+            init_template_file(f"{str(self.slurm_path).replace('.sh', '')}_no_array.sh", f"{str(self.slurm_path).replace('.sh', '')}_{i}.sh", {"{ARRAY}": a})
             logger.info("Done!")
 
-            command = ["sbatch", "--parsable", f"{self.slurm_path.replace('.sh', '')}_{i}.sh"]
+            command = ["sbatch", "--parsable", f"{str(self.slurm_path).replace('.sh', '')}_{i}.sh"]
             result = subprocess.run(command, capture_output = True, text = True, check = True)
 
             logger.info("Done!")
@@ -322,7 +322,7 @@ class BranchedJob(Job):
 
         logger.info("Done!")
 
-        init_template_file(self.template_path, f"{self.slurm_path.replace('.sh', '')}_no_array.sh", replacements)
+        init_template_file(self.template_path, f"{str(self.slurm_path).replace('.sh', '')}_no_array.sh", replacements)
 
     def check(self):
         """ Checks the current status of a specified Slurm job.
@@ -922,9 +922,9 @@ def main():
     # Step 4: Run SCFT step 1
     if step == 4:
         # initialize SCFT 1 job object
-        scft_1_job = BranchedJob(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_template.sh",
+        scft_1_job = BranchedJob(str(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_template.sh"),
                                 param['scft_1']['slurm'] | param['scft_1'] | main_param,
-                                run_path / "scft_multi.sh", True)
+                                str(run_path / "scft_multi.sh"), True)
 
         # bind the callback function
         scft_1_job.callback = scft_callback
@@ -962,9 +962,9 @@ def main():
 
         # initialize SCFT 2 job object
         # make a dict for the array from scft_2_calcs
-        scft_2_job = BranchedJob(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_2_template.sh",
+        scft_2_job = BranchedJob(str(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_2_template.sh"),
                                     param['scft_2']['slurm'] | param['scft_2'] | main_param | {"array": scft_2_calcs},
-                                    run_path / "scft_multi_2.sh", True)
+                                    str(run_path / "scft_multi_2.sh"), True)
 
         # bind the callback function
         scft_2_job.callback = scft_callback
