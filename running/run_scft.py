@@ -388,7 +388,7 @@ def save_w_basis(in_dir: str, names: list[str], sub_name = "w.bf", debug = False
         while lines[8].rfind("    0.000    0.000    1.5707963") != -1:
             lines[8] = lines[8].removesuffix("    0.000    0.000    1.5707963")
 
-        lines[8] + "    0.000    0.000    1.5707963\n"
+        lines[8] += "    0.000    0.000    1.5707963\n"
 
         # can always make it 17000
         lines[14] = "             17000\n"
