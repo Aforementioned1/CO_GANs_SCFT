@@ -337,6 +337,8 @@ class BranchedJob(Job):
 
             code = "UNKNOWN"
 
+            constituents = []
+
             all_run = True
             all_pend = True
             all_done = True
@@ -358,14 +360,28 @@ class BranchedJob(Job):
                     logger.critical("Ending process...")
                     sys.exit()
 
-                if c == "PENDING":
-                    all_run = False
+                if not c in constituents:
+                    constituents.append(c)
 
-                if c == "RUNNING":
+                if not (c == "COMPLETED" or c == "TIMEOUT"):
+                    all_done = False
+
+                if not (c == "COMPLETED" or c == "TIMEOUT" or c == "PENDING"):
                     all_pend = False
 
-                if c != "TIMEOUT" and c != "COMPLETED":
-                    all_done = False
+                if not (c == "COMPLETED" or c == "TIMEOUT" or c == "RUNNING"):
+                    all_run = False
+
+                # if c == "PENDING":
+                #     all_run = False
+
+                # if c == "RUNNING":
+                #     all_pend = False
+
+                # if c != "TIMEOUT" and c != "COMPLETED":
+                #     all_done = False
+
+            # timeout = all(c == "COMPLETED" or c == "TIMEOUT" for c in constituents)
 
             if all_done:
                 code = "TIMEOUT"
@@ -377,7 +393,7 @@ class BranchedJob(Job):
                 code = "RUNNING"
 
             else:
-                code = "PENDING_OR_RUNNING"
+                code = "PENDING_AND_RUNNING"
 
             # code = result.stdout.splitlines()[0]
             logger.info(f"Job {j} (branch index {i})'s code: {code}")
@@ -414,7 +430,7 @@ class BranchedJob(Job):
             codes = self.check()
             for c in codes:
                 # iterate over all codes to see if theyre done
-                if not (c == "COMPLETED" or c == "TIMEOUT"):
+                if not (c == "TIMEOUT"):
                     finished = False
 
             time.sleep(period)
