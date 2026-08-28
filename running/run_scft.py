@@ -424,11 +424,11 @@ def save_w_basis_dir(in_dir: str, numerical = True, sub_name = "w.bf", debug = F
         lines[6] = "              6\n"
 
         # fix cell_param - this one is trickier
-        lines[8] = lines[8].rstrip("\n")
-        while lines[8].rfind("    0.000    0.000    1.5707963") != -1:
-            lines[8] = lines[8].removesuffix("    0.000    0.000    1.5707963")
-
-        lines[8] + "    0.000    0.000    1.5707963\n"
+        # lines[8] = lines[8].rstrip("\n")
+        # while lines[8].rfind("    0.000    0.000    1.5707963") != -1:
+        #     lines[8] = lines[8].removesuffix("    0.000    0.000    1.5707963")
+        lines[8] = lines[8].replace("    0.000    0.000    1.5707963", "").rstrip("\n") + "    0.000    0.000    1.5707963\n"   
+        # lines[8] + "    0.000    0.000    1.5707963\n"
 
         # can always make it 17000
         lines[14] = "             17000\n"
