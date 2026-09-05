@@ -403,6 +403,8 @@ class BranchedJob(Job):
         params.remove("{ARRAY}")
         # remove name
         params.remove("{NUM}")
+        # remove branch
+        params.remove("{BRANCH}")
 
         replacements = {}
 
