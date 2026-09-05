@@ -47,6 +47,7 @@
             "slurm_name": "CO_SCFT_1",
             "log_path": "/users/0/mumma026/CO_GANs_SCFT/running",
             "time": "00:05:00",
+            "time_2": "00:30:00",
             "ntasks": "1",
             "cpus": "1",
             "mem": "280m",

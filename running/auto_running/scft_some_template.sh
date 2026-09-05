@@ -3,7 +3,7 @@
 #SBATCH --output={LOG_PATH}/{NAME}/log/scft_1/%A/%a.out
 #SBATCH --error={LOG_PATH}/{NAME}/log/scft_1/%A/%a.err
 #SBATCH --array={ARRAY}
-#SBATCH --time={TIME}
+#SBATCH --time={TIME_2}
 #SBATCH --ntasks={NTASKS}
 #SBATCH --cpus-per-task={CPUS}
 #SBATCH --mem={MEM}
