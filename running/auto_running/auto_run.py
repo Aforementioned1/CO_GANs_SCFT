@@ -286,7 +286,7 @@ class Job:
         """ Modifies this Job's time parameter by adding the rescheduling time to itself """
         add = self.reschedule_add
         curr = self.param['time']
-        self.param['num'] = str(int(self.param['runs']) + 1)
+        self.param['num'] = str(int(self.param['num']) + 1)
         # self.param['slurm_name'] = self.param['slurm_name'].removesuffix(f"_{self.runs -1}") + f"_{self.runs}"
         total = add_time_strings(curr, add)
         logger.warning("Adding Slurm time for rescheduling!")
