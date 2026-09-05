@@ -2,7 +2,7 @@
 #SBATCH --job-name=CO_AUTO_RUN_14
 #SBATCH --output=/projects/standard/dorfmank/shared/mumma026_holm0994/trial_14/auto_%j.out
 #SBATCH --error=/projects/standard/dorfmank/shared/mumma026_holm0994/trial_14/auto_%j.err
-#SBATCH --time=24:00:00
+#SBATCH --time=20:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=200m

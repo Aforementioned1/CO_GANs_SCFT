@@ -5,7 +5,9 @@
         "co_gans_path": "/home/coasr2026",
         "move": true,
         "move_path": "/home/path/to/shared",
-        "check_step": true
+        "check_step": true,
+        "user": "mumma026",
+        "job_limit": 5000
     },
     "data_path": "run/data.pt",
     "train": {
@@ -53,7 +55,7 @@
             "array": ["1-5000"],
             "time_inc": "00:05:00"
         },
-        "sections": 1000,
+        "sec_size": 5,
         "job_dir_name": "scft_1",
         "param_path": "running/first/param",
         "command_path": "running/first/command",

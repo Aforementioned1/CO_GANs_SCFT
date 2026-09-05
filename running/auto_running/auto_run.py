@@ -76,6 +76,44 @@ def add_time_strings(time_1: str, time_2: str):
 
     return timedelta_to_str(total)
 
+def active_jobs(user: str) -> int:
+    """ Checks the number of Slurm jobs that are currently PENDING
+    or RUNNING for the specified user with the command
+        squeue -u [user] -h -r
+    This is used by Job and BranchedJob to check against active job limits"""
+    logger.info("Attempting to count the number of active jobs...")
+    command = ["squeue", "-u", user, "-h", "-r"]
+
+    result = subprocess.run(command, capture_output = True, text = True, check = True)
+
+    jobs = len(result.stdout.strip().splitlines())
+    logger.info(f"Found number of active jobs: {jobs}")
+
+    return jobs
+
+def array_vals(array: str) -> int:
+    """ Returns the amount of values present in a Slurm array.
+    Slurm arrays may use commas to separate values and hyphens to
+    indicate an (inclusive) range.\n
+    array: The Slurm array to check"""
+    vals = 0
+
+    for v in array.split(","):
+        if v.find("-") != -1:
+            # range
+
+            # subtract and add one to account for inclusivity
+            min, max = v.split("-")
+
+            vals += int(max) - int(min) + 1
+
+        else:
+            # pure value
+            vals += 1
+
+    return vals
+
+
 class Job:
     """ Represents a Slurm job\n
     job_id: The ID of this job\n
@@ -91,7 +129,13 @@ class Job:
     reschedule_add: How much time to add when rescheduling the job for a TIMEOUT, if
     auto_reschedule is True. This should be a string formatted like "HH:MM:SS".
     This will vary between jobs, but a general rule of thumb for this value is 1/4 of
-    the original time."""
+    the original time.\n
+    runs: The amount of times this Job has been scheduled. This number is incremented
+    each time the job is scheduled, is appended to the end of the job name, and is
+    intended to help keep track of various jobs.\n
+    limit_conscious: Whether this Job should be "concious" about Slurm's job limit.
+    If True, this Job will periodically call active_jobs() when schedule() is called,
+    blocking the program until the job limit will not be surpassed."""
     job_id: str
     status: str
     template_path: str
@@ -100,9 +144,12 @@ class Job:
     timeouts: int
     auto_reschedule: bool
     reschedule_add: str
+    runs: int
+    limit_conscious: bool
 
     def __init__(self, template_path: str, param: dict,
-                 slurm_path: str, auto_reschedule: bool):
+                 slurm_path: str, auto_reschedule: bool,
+                 limit_conscious: bool):
         self.job_id = "UNSCHEDULED"
         self.status = "UNSCHEDULED"
         self.template_path = template_path
@@ -111,6 +158,9 @@ class Job:
         self.timeouts = 0
         self.auto_reschedule = auto_reschedule
         self.reschedule_add = param['time_inc']
+        self.runs = 1
+        self.param['slurm_name'] += f"_{self.runs}"
+        self.param['limit_conscious'] = limit_conscious
 
     def print_attrs(self, param = False):
         """ This is a debug method that prints all of this
@@ -166,9 +216,36 @@ class Job:
 
         init_template_file(self.template_path, self.slurm_path, replacements)
 
+    def limit_check(self):
+        """ This method blocks until the Slurm job limit is not surpassed.
+        If the key "array" is present in self.param, wait until the whole
+        array does not surpass the limit """
+        if "array" in self.param:
+            count = array_vals(self.param["array"])
+        else:
+            count = 1
+
+        num = active_jobs(self.param["user"])
+
+        logger.info(f"Active jobs: {num} | Job(s) to add: {count}")
+
+        if num + count < self.param["job_limit"]:
+            logger.info(f"Count ({num + count}) does not exceed {self.param['job_limit']}! Continuing...")
+            return
+        else:
+            logger.info(f"Count ({num + count}) exceeds {self.param['job_limit']}! Waiting...")
+            time.sleep(120)
+            self.limit_check()
+
     def schedule(self):
         """ Schedules this job to run """
+
         logger.info("Attempting to schedule job...")
+
+        if self.limit_conscious:
+            logger.info("Limit conscious is enabled!")
+            self.limit_check()
+
         command = ["sbatch", "--parsable", self.slurm_path]
         result = subprocess.run(command, capture_output = True, text = True, check = True)
 
@@ -214,6 +291,8 @@ class Job:
         """ Modifies this Job's time parameter by adding the rescheduling time to itself """
         add = self.reschedule_add
         curr = self.param['time']
+        self.runs += 1
+        self.param['slurm_name'] = self.param['slurm_name'].removesuffix(f"_{self.runs -1}") + f"_{self.runs}"
         total = add_time_strings(curr, add)
         logger.warning("Adding Slurm time for rescheduling!")
         logger.warning(f"Current: {curr} | Addition: {add} | Total: {total}")
@@ -275,12 +354,35 @@ class BranchedJob(Job):
         logger.info(f"Statuses: {self.statuses}")
         super().print_attrs(param)
 
+    def limit_check(self, array: str):
+        """ This method blocks until the Slurm job limit is not surpassed.
+        For BranchedJobs, this method is called once for each array"""
+        count = array_vals(array)
+
+        num = active_jobs(self.param["user"])
+
+        logger.info(f"Active jobs: {num} | Job(s) to add: {count}")
+
+        if num + count < self.param["job_limit"]:
+            logger.info(f"Count ({num + count}) does not exceed {self.param['job_limit']}! Continuing...")
+            return
+        else:
+            logger.info(f"Count ({num + count}) exceeds {self.param['job_limit']}! Waiting...")
+            time.sleep(240)
+            self.limit_check()
+
     def schedule(self):
         """ Schedules a job for all of the items in the "array" key """
         for i, a in enumerate(self.param['array']):
             logger.info(f"Attempting to schedule job {i}...")
+
+            if self.limit_check:
+                logger.info("Limit conscious is enabled!")
+                self.limit_check(a)
+
             logger.info(f"Prepping specific template...")
-            init_template_file(f"{str(self.slurm_path).replace('.sh', '')}_no_array.sh", f"{str(self.slurm_path).replace('.sh', '')}_{i}.sh", {"{ARRAY}": a})
+            init_template_file(f"{str(self.slurm_path).replace('.sh', '')}_no_array.sh",
+                    f"{str(self.slurm_path).replace('.sh', '')}_{i}.sh", {"{ARRAY}": a, "{SLURM_NAME}": f"{self.param['slurm_name']}_{i}"})
             logger.info("Done!")
 
             command = ["sbatch", "--parsable", f"{str(self.slurm_path).replace('.sh', '')}_{i}.sh"]
@@ -304,6 +406,8 @@ class BranchedJob(Job):
         params = self.read_template()
         # remove array
         params.remove("{ARRAY}")
+        # remove name
+        params.remove("{SLURM_NAME}")
 
         replacements = {}
 
@@ -688,7 +792,7 @@ def scft_1_conv(run_path: Path, param: dict):
 
 def scft_1_time(run_path: Path, param: dict):
     logger.info("[HELPER] SCFT_1_TIME (3)")
-    run_scft.review_csv_timings(str(run_path / "data/scft_1.csv"), sec_div = param["scft_1"]["sec_div"], debug = False)
+    run_scft.review_csv_timings(str(run_path / "data/scft_1_timings.csv"), sec_div = param["scft_1"]["sec_div"], debug = False)
 
 def prep_scft_2(run_path: Path, co_gans_path: Path, param: dict):
     logger.info("PREP_SCFT_2 (4)")
@@ -793,6 +897,11 @@ def scft_2_conv(run_path: Path, param: dict):
     # ERR
     logger.error(f"Error (no directory):        {data['err']}")
 
+
+def scft_2_time(run_path: Path, param: dict):
+    logger.info("[HELPER] SCFT_2_TIME (8)")
+    run_scft.review_csv_timings(str(run_path / "data/scft_2_timings.csv"), sec_div = param["scft_2"]["sec_div"], debug = False)
+
 def load_params(paths: list[str]):
     """ Attempts to load JSON parameters from all file paths in paths.
     This can be used to easily change small amounts of JSON parameters while
@@ -890,7 +999,7 @@ def main():
         # init gan train job object
         train_job = Job(co_gans_path / "CO_GANs_SCFT/running/auto_running/train_template.sh",
                         param['train']['slurm'] | param['train'] | main_param,
-                        run_path / "train.sh", True)
+                        run_path / "train.sh", True, True)
 
         # init script file with parameters
         train_job.create_script()
@@ -933,7 +1042,7 @@ def main():
         # init generation job object
         gen_job = Job(co_gans_path / "CO_GANs_SCFT/running/auto_running/generate_template.sh",
                     param['gen']['slurm'] | param['gen'] | main_param | {"gweights": target_model},
-                    run_path / "generate.sh", True)
+                    run_path / "generate.sh", True, True)
 
         # init script file with parameters
         gen_job.create_script()
@@ -968,12 +1077,27 @@ def main():
 
         step = write_step(step + 1, run_path / "step")
 
-    # Step 4: Run SCFT step 1
+    # Step 4: Run SCFT step 1 run_some job
     if step == 4:
+        scft_1_some_job = BranchedJob(str(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_some_template.sh"),
+                                param['scft_1']['slurm'] | param['scft_1'] | main_param, str(run_path / "scft_some.sh"), False, True)
+
+        # init script
+        scft_1_job.create_script()
+
+        # schedule and wait
+        # as this uses the default callback function, it should only run once
+        scft_1_job.schedule()
+        scft_1_job.wait_for_slurm_end()
+
+        step = write_step(step + 1, run_path / "step")
+
+    # Step 5: Run SCFT step 1
+    if step == 5:
         # initialize SCFT 1 job object
         scft_1_job = BranchedJob(str(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_template.sh"),
                                 param['scft_1']['slurm'] | param['scft_1'] | main_param,
-                                str(run_path / "scft_multi.sh"), True)
+                                str(run_path / "scft_multi.sh"), True, True)
 
         # bind the callback function
         scft_1_job.callback = scft_callback
@@ -994,8 +1118,8 @@ def main():
 
         step = write_step(step + 1, run_path / "step")
 
-    # Step 5: Collect SCFT step 1 data
-    if step == 5:
+    # Step 6: Collect SCFT step 1 data
+    if step == 6:
         # collect csv data
         scft_1_to_csv(run_path)
 
@@ -1004,15 +1128,22 @@ def main():
 
         step = write_step(step + 1, run_path / "step")
 
-    # Step 6: Prepare SCFT step 2
-    if step == 6:
+    # Step 7: Print SCFT step 1 timing data
+    if step == 7:
+        # timing
+        scft_1_time(run_path, param)
+
+        step = write_step(step + 1, run_path / "step")
+
+    # Step 8: Prepare SCFT step 2
+    if step == 8:
         # prepare for scft step 2
         prep_scft_2(run_path, co_gans_path, param)
 
         step = write_step(step + 1, run_path / "step")
 
-    # Step 7: Run SCFT step 2
-    if step == 7:
+    # Step 9: Run SCFT step 2
+    if step == 9:
         # use code from print_dirs.py to find which ones are left, in array form
         scft_2_calcs = scft_array_timeout_check(str(run_path / param['scft_2']['job_dir_name']))
 
@@ -1020,7 +1151,7 @@ def main():
         # make a dict for the array from scft_2_calcs
         scft_2_job = BranchedJob(str(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_2_template.sh"),
                                     param['scft_2']['slurm'] | param['scft_2'] | main_param | {"array": scft_2_calcs},
-                                    str(run_path / "scft_multi_2.sh"), True)
+                                    str(run_path / "scft_multi_2.sh"), True, True)
 
         # bind the callback function
         scft_2_job.callback = scft_callback
@@ -1036,8 +1167,8 @@ def main():
 
         step = write_step(step + 1, run_path / "step")
 
-    # Step 8: Collect SCFT step 2 data
-    if step == 8:
+    # Step 10: Collect SCFT step 2 data
+    if step == 10:
         # collect csv data
         scft_2_to_csv(run_path)
 
@@ -1045,6 +1176,14 @@ def main():
         scft_2_conv(run_path, param)
 
         step = write_step(step + 1, run_path / "step")   
+
+    # Step 11: Print SCFT step 2 timing data
+    if step == 10:
+        # timing
+        scft_2_time(run_path, param)
+
+        step = write_step(step + 1, run_path / "step")
+        
 
 main()
 
