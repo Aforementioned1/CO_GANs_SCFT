@@ -56,7 +56,7 @@
             "array": ["1-1000"],
             "time_inc": "00:05:00"
         },
-        "sec_size": 5,
+        "sec_size": "5",
         "job_dir_name": "scft_1",
         "param_path": "running/first/param",
         "command_path": "running/first/command",
