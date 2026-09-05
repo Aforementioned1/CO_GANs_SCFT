@@ -1094,9 +1094,12 @@ def main():
 
     # Step 5: Run SCFT step 1
     if step == 5:
+        # use code from print_dirs.py to find which ones are left, in array form
+        scft_1_calcs = scft_array_timeout_check(str(run_path / param['scft_1']['job_dir_name']))
+
         # initialize SCFT 1 job object
         scft_1_job = BranchedJob(str(co_gans_path / "CO_GANs_SCFT/running/auto_running/scft_multi_template.sh"),
-                                param['scft_1']['slurm'] | param['scft_1'] | main_param,
+                                param['scft_1']['slurm'] | param['scft_1'] | main_param | {"array": scft_1_calcs},
                                 str(run_path / "scft_multi.sh"), True, True)
 
         # bind the callback function
