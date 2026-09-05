@@ -42,7 +42,7 @@
         },
         "use_absolute_model": false,
         "absolute_model_path": "blank.pt",
-        "seed": 500,
+        "seed": "500",
         "num": "1"
     },
     "scft_1": {
