@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name={SLURM_NAME}_{NAME}
+#SBATCH --job-name={SLURM_NAME}_{NAME}_{NUM}
 #SBATCH --output={LOG_PATH}/{NAME}/log/gan_%j.out
 #SBATCH --error={LOG_PATH}/{NAME}/log/gan_%j.err
 #SBATCH --time={TIME}

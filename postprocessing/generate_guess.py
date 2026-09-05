@@ -6,10 +6,12 @@ import os
 import argparse
 
 # Set random seed for reproducibility
-MAUNUAL_SEED = 500
-print("Random Seed: ", MAUNUAL_SEED)
-random.seed(MAUNUAL_SEED)
-torch.manual_seed(MAUNUAL_SEED)
+def set_seed(seed: int):
+    """ Sets the random seed to the specified value. """
+    MANUAL_SEED = seed
+    print("Random Seed: ", MANUAL_SEED)
+    random.seed(MANUAL_SEED)
+    torch.manual_seed(MANUAL_SEED)
 
 class Generator(nn.Module):
     def __init__(self, ngpu=0, latent_dim=100):
@@ -98,6 +100,8 @@ def generate_images(weight_path, out_dir, num_images):
             save_as_rf(fake_cpu, save_path)
 
 def main(args):
+    set_seed(args.seed)
+
     weight_path = args.weight_path
     out_dir = args.out_dir
     num_images = args.num_images
@@ -105,6 +109,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate 3D density fields using the trained GAN generator')
+    parser.add_argument('--seed', type=str, default=500, help='The random seed to use. Defaults to 500.')
     parser.add_argument('--weight_path', type=str, help='Path to the pretrained generator weights')
     parser.add_argument('--out_dir', type=str, help='Output directory to save the generated .rf files')
     parser.add_argument('--num_images', type=int, default=5000, help='Number of density fields to generate')

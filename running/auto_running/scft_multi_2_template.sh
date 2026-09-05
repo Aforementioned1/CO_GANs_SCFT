@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name={SLURM_NAME}_{NAME}
+#SBATCH --job-name={SLURM_NAME}_{NAME}_{NUM}_{BRANCH}
 #SBATCH --output={LOG_PATH}/{NAME}/log/scft_2/%A/%a.out
 #SBATCH --error={LOG_PATH}/{NAME}/log/scft_2/%A/%a.err
 #SBATCH --array={ARRAY}

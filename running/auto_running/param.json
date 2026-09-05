@@ -25,7 +25,8 @@
             "time_inc": "00:30:00"
         },
         "batch_size": "128",
-        "learning_rate": "0.0002"
+        "learning_rate": "0.0002",
+        "num": "1"
     },
     "gen": {
         "slurm": {
@@ -40,7 +41,9 @@
             "time_inc": "00:15:00"
         },
         "use_absolute_model": false,
-        "absolute_model_path": "blank.pt"
+        "absolute_model_path": "blank.pt",
+        "seed": 500,
+        "num": "1"
     },
     "scft_1": {
         "slurm": {
@@ -63,7 +66,9 @@
         "run_path": "running/first/run",
         "detailed_conv": true,
         "sec_div": 300,
-        "callback_first": false
+        "callback_first": false,
+        "num": "1",
+        "branch": "0"
     },
     "scft_2": {
         "slurm": {
@@ -83,6 +88,8 @@
         "command_path": "running/second/command",
         "run_path": "running/second/run",
         "detailed_conv": true,
-        "sec_div": 3600
+        "sec_div": 3600,
+        "num": "1",
+        "branch": "0"
     }
 }

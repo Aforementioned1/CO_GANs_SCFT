@@ -130,9 +130,6 @@ class Job:
     auto_reschedule is True. This should be a string formatted like "HH:MM:SS".
     This will vary between jobs, but a general rule of thumb for this value is 1/4 of
     the original time.\n
-    runs: The amount of times this Job has been scheduled. This number is incremented
-    each time the job is scheduled, is appended to the end of the job name, and is
-    intended to help keep track of various jobs.\n
     limit_conscious: Whether this Job should be "concious" about Slurm's job limit.
     If True, this Job will periodically call active_jobs() when schedule() is called,
     blocking the program until the job limit will not be surpassed."""
@@ -144,7 +141,6 @@ class Job:
     timeouts: int
     auto_reschedule: bool
     reschedule_add: str
-    runs: int
     limit_conscious: bool
 
     def __init__(self, template_path: str, param: dict,
@@ -158,8 +154,7 @@ class Job:
         self.timeouts = 0
         self.auto_reschedule = auto_reschedule
         self.reschedule_add = param['time_inc']
-        self.runs = 1
-        self.param['slurm_name'] += f"_{self.runs}"
+        # self.param['slurm_name'] += f"_{self.runs}"
         self.limit_conscious = limit_conscious
 
     def print_attrs(self, param = False):
@@ -291,8 +286,8 @@ class Job:
         """ Modifies this Job's time parameter by adding the rescheduling time to itself """
         add = self.reschedule_add
         curr = self.param['time']
-        self.runs += 1
-        self.param['slurm_name'] = self.param['slurm_name'].removesuffix(f"_{self.runs -1}") + f"_{self.runs}"
+        self.param['num'] = str(int(self.param['runs'] + 1))
+        # self.param['slurm_name'] = self.param['slurm_name'].removesuffix(f"_{self.runs -1}") + f"_{self.runs}"
         total = add_time_strings(curr, add)
         logger.warning("Adding Slurm time for rescheduling!")
         logger.warning(f"Current: {curr} | Addition: {add} | Total: {total}")
@@ -347,7 +342,7 @@ class BranchedJob(Job):
     list of Slurm array strings to use."""
     job_ids = []
     statuses = []
-    callback = lambda self: logger.info("No specified callback. Continuing program...")
+    callback = lambda job: logger.info("No specified callback. Continuing program...")
 
     def print_attrs(self, param=False):
         logger.info(f"Job IDs: {self.job_ids}")
@@ -382,7 +377,7 @@ class BranchedJob(Job):
 
             logger.info(f"Prepping specific template...")
             init_template_file(f"{str(self.slurm_path).replace('.sh', '')}_no_array.sh",
-                    f"{str(self.slurm_path).replace('.sh', '')}_{i}.sh", {"{ARRAY}": a, "{SLURM_NAME}": f"{self.param['slurm_name']}_{i}"})
+                    f"{str(self.slurm_path).replace('.sh', '')}_{i}.sh", {"{ARRAY}": a, "{NUM}": f"{self.param['num']}", "{BRANCH}": str(i)})
             logger.info("Done!")
 
             command = ["sbatch", "--parsable", f"{str(self.slurm_path).replace('.sh', '')}_{i}.sh"]
@@ -407,7 +402,7 @@ class BranchedJob(Job):
         # remove array
         params.remove("{ARRAY}")
         # remove name
-        params.remove("{SLURM_NAME}")
+        params.remove("{NUM}")
 
         replacements = {}
 
