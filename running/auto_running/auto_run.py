@@ -364,7 +364,7 @@ class BranchedJob(Job):
         else:
             logger.info(f"Count ({num + count}) exceeds {self.param['job_limit']}! Waiting...")
             time.sleep(240)
-            self.limit_check(array)
+            self.limit_check(array = array)
 
     def schedule(self):
         """ Schedules a job for all of the items in the "array" key """
