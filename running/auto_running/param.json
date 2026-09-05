@@ -53,7 +53,7 @@
             "mem": "280m",
             "mail_type": "ALL",
             "mail_user": "mumma026@umn.edu,holm0994@umn.edu",
-            "array": ["1-5000"],
+            "array": ["1-1000"],
             "time_inc": "00:05:00"
         },
         "sec_size": 5,

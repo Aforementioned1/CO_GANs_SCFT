@@ -1083,12 +1083,12 @@ def main():
                                 param['scft_1']['slurm'] | param['scft_1'] | main_param, str(run_path / "scft_some.sh"), False, True)
 
         # init script
-        scft_1_job.create_script()
+        scft_1_some_job.create_script()
 
         # schedule and wait
         # as this uses the default callback function, it should only run once
-        scft_1_job.schedule()
-        scft_1_job.wait_for_slurm_end()
+        scft_1_some_job.schedule()
+        scft_1_some_job.wait_for_slurm_end()
 
         step = write_step(step + 1, run_path / "step")
 
