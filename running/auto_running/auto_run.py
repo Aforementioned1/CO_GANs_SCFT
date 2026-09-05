@@ -364,16 +364,16 @@ class BranchedJob(Job):
         else:
             logger.info(f"Count ({num + count}) exceeds {self.param['job_limit']}! Waiting...")
             time.sleep(240)
-            self.limit_check()
+            self.limit_check(array)
 
     def schedule(self):
         """ Schedules a job for all of the items in the "array" key """
         for i, a in enumerate(self.param['array']):
             logger.info(f"Attempting to schedule job {i}...")
 
-            if self.limit_check:
+            if self.limit_conscious:
                 logger.info("Limit conscious is enabled!")
-                self.limit_check(a)
+                self.limit_check(array = a)
 
             logger.info(f"Prepping specific template...")
             init_template_file(f"{str(self.slurm_path).replace('.sh', '')}_no_array.sh",
