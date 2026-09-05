@@ -160,7 +160,7 @@ class Job:
         self.reschedule_add = param['time_inc']
         self.runs = 1
         self.param['slurm_name'] += f"_{self.runs}"
-        self.param['limit_conscious'] = limit_conscious
+        self.limit_conscious = limit_conscious
 
     def print_attrs(self, param = False):
         """ This is a debug method that prints all of this
