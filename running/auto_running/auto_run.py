@@ -342,7 +342,7 @@ class BranchedJob(Job):
     list of Slurm array strings to use."""
     job_ids = []
     statuses = []
-    callback = lambda job: logger.info("No specified callback. Continuing program...")
+    callback = lambda *args, **kwargs: logger.info("No specified callback. Continuing program...")
 
     def print_attrs(self, param=False):
         logger.info(f"Job IDs: {self.job_ids}")
