@@ -71,6 +71,7 @@ def calc_state(in_path: str, log_name = "log", debug = False):
     requirements for SUC_NO_CONV\n
     SUC_NO_CONV: The SCFT calculation did not converge. This is for a rare edge case in which
     an SCFT initial guess creates a tolerance value of "NaN", crashing SCFT.\n
+    WARN_EDGE: The SCFT calculation "converged", but was likely terminated before it could finish.
     WARN_NO_LOG: The SCFT calculation has not log file and has therefore presumably not
     started running.\n
     WARN_NO_ITER: The SCFT log file has no recorded iterations\n
@@ -120,12 +121,16 @@ def calc_state(in_path: str, log_name = "log", debug = False):
             ind = text.rfind("Iterator failed to converge.")
             if ind != -1:
                 unconv = True
+
+            finished = text.strip().endswith("FINISH")
             
             if debug:
                 print("Not converged:", unconv)
 
-            if converged:
+            if converged and finished:
                 return "SUC_CONV"
+            if converged and not finished:
+                return "WARN_EDGE"
             # do this later in case it converged on iteration #2500
             if num == max_iterations - 1:
                 return "SUC_MAX_ITER"
@@ -1444,6 +1449,32 @@ def read_multi_csv(dirs: list[str], csv_cols = [("free_energy", lambda text: flo
             col = read_csv_col(d + sub_path, c, lam, debug)
             temp_cols.append(col)
         data.append(list(zip(*temp_cols,repeat(d))))
+
+    return data
+
+def read_csv_dir(dir: str, files: list[str], filename_lambda = lambda text: f"trial_{text}_scft_2.csv",
+                   csv_cols = [("free_energy", lambda text: float(text)), ("name", lambda text: text)],
+                   debug = False) -> list[list[tuple]]:
+    """ Reads multiple CSV columns from CSV files in the same directory
+    and outputs them as a list of lists of tuples.\n
+    dir: The directory to read from\n
+    files: The files to read from. See filename_lambda for a way to dynamically modify files\n
+    filename_lambda: A lambda that is applied to each filename in files. Defaults to inserting the
+    filename into the "{filename}" of the string "trial_{filename}_scft_2.csv"\n
+    csv_cols: A list of tuple str-lambda pairs. Each pair contains a CSV column to read
+    and a lambda to apply to the column (such as converting its data to a float).
+    See read_csv_col() for more information.\n
+    debug: Whether to print extra information for debugging\n"""
+    data = []
+
+    for f in files:
+        name = filename_lambda(f)
+        temp_cols = []
+        for c, lam in csv_cols:
+            col = read_csv_col(str(Path(dir) / name), c, lam, debug)
+            temp_cols.append(col)
+
+        data.append(list(zip(*temp_cols,repeat(f))))
 
     return data
 

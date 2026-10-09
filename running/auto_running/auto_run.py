@@ -258,7 +258,7 @@ class Job:
             reports it and ends the program. Otherwise, outputs the job's status."""
         logger.info(f"Attempting to view job {self.job_id}'s status...")
         
-        command = ["sacct", "--format=State", "--noheader", "-P", "-X", "-j", self.job_id]
+        command = ["sacct", "--format=State", "--noheader", "-P", "-X", "-j", self.job_id, "-u", self.param['user']]
         result = subprocess.run(command, capture_output = True, text = True, check = True)
     
         code = result.stdout.splitlines()[0]
@@ -432,7 +432,7 @@ class BranchedJob(Job):
         for i, j in enumerate(self.job_ids):
             logger.info(f"Attempting to view job {j} (branch index {i})'s status...")
 
-            command = ["sacct", "--format=State", "--noheader", "-P", "-X", "-j", j]
+            command = ["sacct", "--format=State", "--noheader", "-P", "-X", "-j", j, "-u", self.param['user']]
             # this will return a line for each array job
             result = subprocess.run(command, capture_output = True, text = True, check = True)
 

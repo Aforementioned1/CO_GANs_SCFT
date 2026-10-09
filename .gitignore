@@ -9,7 +9,7 @@ data
 temp.*
 test.*
 temp.json
-uniques
+uniques*
 second_run_data
 *_run
 images
