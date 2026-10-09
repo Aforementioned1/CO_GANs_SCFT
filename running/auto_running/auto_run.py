@@ -792,7 +792,7 @@ def scft_1_time(run_path: Path, param: dict):
     run_scft.review_csv_timings(str(run_path / "data/scft_1_timings.csv"), sec_div = param["scft_1"]["sec_div"], debug = False)
 
 def prep_scft_2(run_path: Path, co_gans_path: Path, param: dict):
-    logger.info("PREP_SCFT_2 (4)")
+    logger.info("[HELPER] PREP_SCFT_2 (4)")
     # read names of each initial guess (should be 1-250) and whether they converged
     names = run_scft.read_csv_col(in_path = str(run_path / "data/scft_1.csv"), 
                                   col = "name", debug = False)
@@ -819,20 +819,20 @@ def prep_scft_2(run_path: Path, co_gans_path: Path, param: dict):
                 run_path =  str(co_gans_path / "CO_GANs_SCFT" / param['scft_2']['run_path']),
                 debug = False)
 
-    logger.info("FIX_W_BASIS (4.5)")
+    logger.info("[HELPER] FIX_W_BASIS (4.5)")
     # this uses the more advanced save_w_basis_dir() rather than the outdated fix_w_basis_dir()
 
     # fix w.bf files for second SCFT pass
     run_scft.save_w_basis_dir(in_dir = str(run_path / "scft_2"), debug = False)
 
 def scft_2_to_csv(run_path: Path):
-    logger.info("SCFT_2_TO_CSV (5)")
+    logger.info("[HELPER] SCFT_2_TO_CSV (5)")
     # combine data to CSV file
     run_scft.to_csv_num(dir_path = str(run_path / "scft_2"), num_start = 1, num_end = 5000,
                         output = str(run_path / "data/scft_2.csv"), debug = False)
 
 def scft_2_conv(run_path: Path, param: dict):
-    logger.info("SCFT_2_CONV (6)")
+    logger.info("[HELPER] SCFT_2_CONV (6)")
     data = {
         "suc":  0, # all in group SUC
         "conv": 0, # SUC_CONV
@@ -1131,7 +1131,9 @@ def main():
     # Step 7: Print SCFT step 1 timing data
     if step == 7:
         # timing
-        scft_1_time(run_path, param)
+
+        logger.warning("SCFT_1_TIME is currently disabled!")
+        # scft_1_time(run_path, param)
 
         step = write_step(step + 1, run_path / "step")
 
@@ -1180,7 +1182,8 @@ def main():
     # Step 11: Print SCFT step 2 timing data
     if step == 10:
         # timing
-        scft_2_time(run_path, param)
+        logger.warning("SCFT_2_TIME is currently disabled!")
+        # scft_2_time(run_path, param)
 
         step = write_step(step + 1, run_path / "step")
         
