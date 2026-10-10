@@ -13,10 +13,15 @@ from itertools import repeat
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import colorsys
+import sys
+
+import logging
+logger = logging.getLogger(__name__)
+
+logging.basicConfig(level = logging.INFO, stream = sys.stdout, format='%(asctime)s [%(levelname)s] %(message)s')
 
 TRANSLATIONS = [("first_run", 1), ("second_run", 2), ("third_run", 3), ("fourth_run", 4), ("eighth_run", 8),
                 ("ninth_run", 9), ("tenth_run", 10), ("eleventh_run", 11), ("twelfth_run", 12), ("thirteenth_run", 13)]
-
 
 f_DG = 2.74517041186 # free energy of the double gyroid phase
 
@@ -24,6 +29,14 @@ max_iterations = 2500
 
 # little enum for compare_groups(). Could be added to other functions maybe
 OutputType = Enum("OutputType", "STDOUT_ONLY STDOUT_AND_FILE FILE_ONLY")
+
+def set_basic_config(filename = None, level = logging.INFO, format = '%(asctime)s [%(levelname)s] %(message)s'):
+    """ Initializes the configs of the logging module
+    THIS FUNCTION MUST BE CALLED TO ENSURE LOGGING WORKS CORRECTLY"""
+    logging.basicConfig(force = True, level = level, filename = filename, format = format)
+
+def print_hello():
+    logger.info("hello world")
 
 def print_output(output: str, output_type: OutputType, out_file: str):
     """Prints output to a location decided by the user using the OutputType enum.
@@ -36,9 +49,9 @@ def print_output(output: str, output_type: OutputType, out_file: str):
     NOTE: This function automatically appends a new line character "\\n" to file outputs."""
     match output_type:
         case OutputType.STDOUT_ONLY:
-            print(output)
+            logger.info(output)
         case OutputType.STDOUT_AND_FILE:
-            print(output)
+            logger.info(output)
             with open(out_file, "a") as f:
                 f.write(output + "\n")
         case OutputType.FILE_ONLY:
@@ -101,10 +114,10 @@ def calc_state(in_path: str, log_name = "log", debug = False):
                 # strip whitespace, then cast as int
                 num = int(text[ind:ind+4].strip())
                 if debug:
-                    print("Highest iteration:",num)
+                    logger.debug("Highest iteration:",num)
             else:
                 if debug:
-                    print("No iterations found.")
+                    logger.debug("No iterations found.")
                 return "WARN_NO_ITER"
             
             # look for whether it converged
@@ -114,7 +127,7 @@ def calc_state(in_path: str, log_name = "log", debug = False):
                 converged = True
             
             if debug:
-                print("Converged:", converged)
+                logger.debug("Converged:", converged)
 
             # explicitly look for this to catch NaN issues
             unconv = False
@@ -125,7 +138,7 @@ def calc_state(in_path: str, log_name = "log", debug = False):
             finished = text.strip().endswith("FINISH")
             
             if debug:
-                print("Not converged:", unconv)
+                logger.debug("Not converged:", unconv)
 
             if converged and finished:
                 return "SUC_CONV"
@@ -140,12 +153,12 @@ def calc_state(in_path: str, log_name = "log", debug = False):
                 return "WARN_NOT_FIN"
         else:
             if debug:
-                print(log_name, "log file does not exist or is not a file! Skipping...")
+                logger.debug(log_name, "log file does not exist or is not a file! Skipping...")
             return "WARN_NO_LOG"
 
     else:
         if debug:
-            print(in_path, "does not exist or is not a directory! Skipping...")
+            logger.debug(in_path, "does not exist or is not a directory! Skipping...")
         return "ERR_NO_DIR"
 
 def get_state_cat(in_path: str, log_name = "log", debug = False):
@@ -191,13 +204,13 @@ def prepare_files(in_path: str, out_path: str, out_name: str,
         By default, removes leading "guess_" and trailing ".rf"\n
         debug: Whether to print extra information for debugging\n"""
     if debug:
-        print("Debug mode ON for prepare_files")
-        print("In path:", in_path)
-        print("Out path:", out_path)
-        print("Out name:", out_name)
-        print("Param path:", param_path)
-        print("Command path:", command_path)
-        print("Run path:", run_path)
+        logger.debug("Debug mode ON for prepare_files")
+        logger.debug("In path:", in_path)
+        logger.debug("Out path:", out_path)
+        logger.debug("Out name:", out_name)
+        logger.debug("Param path:", param_path)
+        logger.debug("Command path:", command_path)
+        logger.debug("Run path:", run_path)
 
     dir_path = Path(in_path)
     if dir_path.is_dir():
@@ -212,8 +225,8 @@ def prepare_files(in_path: str, out_path: str, out_name: str,
             if not Path(out_path + "/" + name + "/out").exists():
                 
                 if debug:
-                    print("Pre-lambda name:", f.name)
-                    print("Post-lambda name:", name)
+                    logger.debug("Pre-lambda name:", f.name)
+                    logger.debug("Post-lambda name:", name)
                 # make all directories to out_path/name/out (out must be included for later)
                 os.makedirs(out_path + "/" + name + "/out")
                 # copy the file to its target with predetermined name
@@ -225,12 +238,12 @@ def prepare_files(in_path: str, out_path: str, out_name: str,
                 # copy run file
                 shutil.copy(run_path, out_path + "/"  + name + "/run")
                 if debug:
-                    print("Initialized", name, "directory")
+                    logger.debug("Initialized", name, "directory")
             else:
-                print(f"{f} already exists!")
+                logger.warning(f"{f} already exists!")
     else:
         if debug:
-            print(in_path, "does not exist or is not a directory! Skipping...")
+            logger.debug(in_path, "does not exist or is not a directory! Skipping...")
 
 def prepare_files_second(in_path: str, dir_names: list[str], out_path: str,
                   param_path: str, command_path: str, run_path: str,
@@ -257,18 +270,18 @@ def prepare_files_second(in_path: str, dir_names: list[str], out_path: str,
         SCFT directories) to fix each w.bf file.
         """
     if len(dir_names) <= 0:
-        print("Invalid list of allowed directory names found! Skipping...")
+        logger.info("Invalid list of allowed directory names found! Skipping...")
         return
     if debug:
-        print("Debug mode ON for prepare_files_second")
-        print("In path:", in_path)
-        print("Allowed names:", dir_names)
-        print("Sub-path:", sub_path)
-        print("Example completed path:", (in_path + "/" + dir_names[0] + "/" + sub_path))
-        print("Out path:", out_path)
-        print("Param path:", param_path)
-        print("Command path:", command_path)
-        print("Run path:", run_path)
+        logger.debug("Debug mode ON for prepare_files_second")
+        logger.debug("In path:", in_path)
+        logger.debug("Allowed names:", dir_names)
+        logger.debug("Sub-path:", sub_path)
+        logger.debug("Example completed path:", (in_path + "/" + dir_names[0] + "/" + sub_path))
+        logger.debug("Out path:", out_path)
+        logger.debug("Param path:", param_path)
+        logger.debug("Command path:", command_path)
+        logger.debug("Run path:", run_path)
 
     ### TODO: make some of this naming make more sense!!!!!
     big_in_path = Path(in_path)
@@ -280,7 +293,7 @@ def prepare_files_second(in_path: str, dir_names: list[str], out_path: str,
             d = big_in_path / dir
             if d.exists() and d.is_dir():
                 if debug:
-                    print("Current:", dir)
+                    logger.debug("Current:", dir)
                 # make a Pathlib Path object to the current target directory
                 this_path = big_out_path / dir
                 # make all directories to out_path/name/out (out must be included for later)
@@ -297,13 +310,13 @@ def prepare_files_second(in_path: str, dir_names: list[str], out_path: str,
                 # copy run file
                 shutil.copy(run_path, this_path_str)
                 if debug:
-                    print("Initialized", this_path_str, "directory")
+                    logger.debug("Initialized", this_path_str, "directory")
             else:
                 if debug:
-                    print(d, "does not exist or is not a directory! Skipping...")
+                    logger.debug(d, "does not exist or is not a directory! Skipping...")
     else:
         if debug:
-            print(in_path, "does not exist or is not a directory! Skipping...")
+            logger.debug(in_path, "does not exist or is not a directory! Skipping...")
 
 def fix_w_basis(in_path: str, out_path: str, debug = False):
     """ NOTE: This function is deprecated. save_w_basis() accomplishes the
@@ -322,19 +335,19 @@ def fix_w_basis(in_path: str, out_path: str, debug = False):
         (this will often be the same as out_path)\n
         debug: Whether to print extra information for debugging\n"""
     if debug:
-        print("Debug mode ON for fix_w_basis")
-        print("In path:", in_path)
-        print("Out path:", out_path)
+        logger.debug("Debug mode ON for fix_w_basis")
+        logger.debug("In path:", in_path)
+        logger.debug("Out path:", out_path)
     
     with open(in_path, "r") as f:
         # read as lines for easier processing
         lines = f.readlines()
 
     if debug:
-        print("Initial line 5:", lines[4])
-        print("Initial line 7:", lines[6])
-        print("Initial line 9:", lines[8])
-        print("Initial line 15:", lines[13])
+        logger.debug("Initial line 5:", lines[4])
+        logger.debug("Initial line 7:", lines[6])
+        logger.debug("Initial line 9:", lines[8])
+        logger.debug("Initial line 15:", lines[13])
 
     # change crystal_system to be triclinic
     lines[4] = lines[4].rstrip("orthorhombic\n") + "triclinic\n"
@@ -348,10 +361,10 @@ def fix_w_basis(in_path: str, out_path: str, debug = False):
     lines[14] = lines[14].rstrip("32768\n") + "17000\n"
 
     if debug:
-        print("Final line 5:", lines[4])
-        print("Final line 7:", lines[6])
-        print("Final line 9:", lines[8])
-        print("Final line 15:", lines[13])
+        logger.debug("Final line 5:", lines[4])
+        logger.debug("Final line 7:", lines[6])
+        logger.debug("Final line 9:", lines[8])
+        logger.debug("Final line 15:", lines[13])
 
     with open(out_path, "w") as f:
         f.writelines(lines)
@@ -377,10 +390,10 @@ def save_w_basis(in_dir: str, names: list[str], sub_name = "w.bf", debug = False
             lines = f.readlines()
 
         if debug:
-            print("Initial line 5:", lines[4])
-            print("Initial line 7:", lines[6])
-            print("Initial line 9:", lines[8])
-            print("Initial line 15:", lines[13])
+            logger.debug("Initial line 5:", lines[4])
+            logger.debug("Initial line 7:", lines[6])
+            logger.debug("Initial line 9:", lines[8])
+            logger.debug("Initial line 15:", lines[13])
 
         # can always make it triclinic
         lines[4] = "              triclinic\n"
@@ -400,10 +413,10 @@ def save_w_basis(in_dir: str, names: list[str], sub_name = "w.bf", debug = False
         lines[14] = "             17000\n"
 
         if debug:
-            print("Final line 5:", lines[4])
-            print("Final line 7:", lines[6])
-            print("Final line 9:", lines[8])
-            print("Final line 15:", lines[13])
+            logger.debug("Final line 5:", lines[4])
+            logger.debug("Final line 7:", lines[6])
+            logger.debug("Final line 9:", lines[8])
+            logger.debug("Final line 15:", lines[13])
 
         with open((in_path / n / sub_name).absolute(), "w") as f:
             f.writelines(lines)
@@ -417,10 +430,10 @@ def save_w_basis_dir(in_dir: str, numerical = True, sub_name = "w.bf", debug = F
             lines = f.readlines()
 
         if debug:
-            print("Initial line 5:", lines[4])
-            print("Initial line 7:", lines[6])
-            print("Initial line 9:", lines[8])
-            print("Initial line 15:", lines[13])
+            logger.debug("Initial line 5:", lines[4])
+            logger.debug("Initial line 7:", lines[6])
+            logger.debug("Initial line 9:", lines[8])
+            logger.debug("Initial line 15:", lines[13])
 
         # can always make it triclinic
         lines[4] = "              triclinic\n"
@@ -439,10 +452,10 @@ def save_w_basis_dir(in_dir: str, numerical = True, sub_name = "w.bf", debug = F
         lines[14] = "             17000\n"
 
         if debug:
-            print("Final line 5:", lines[4])
-            print("Final line 7:", lines[6])
-            print("Final line 9:", lines[8])
-            print("Final line 15:", lines[13])
+            logger.debug("Final line 5:", lines[4])
+            logger.debug("Final line 7:", lines[6])
+            logger.debug("Final line 9:", lines[8])
+            logger.debug("Final line 15:", lines[13])
 
         with open((in_path / n / sub_name).absolute(), "w") as f:
             f.writelines(lines)    
@@ -481,14 +494,14 @@ def fix_w_basis_dir(in_path: str, ignored_names: list[str], out_path: str,
         so this must be done manually for now.
         debug: Whether to print extra information for debugging\n"""
     if debug:
-        print("Debug mode ON for fix_w_basis")
-        print("In path:", in_path)
-        print("Ignored names:", ignored_names)
-        print("Out path:", out_path)
-        print("In name:", in_name)
-        print("Out name:", out_name)
-        print("Write fixed:", write_fixed)
-        print("Write target:", fixed_path)
+        logger.debug("Debug mode ON for fix_w_basis")
+        logger.debug("In path:", in_path)
+        logger.debug("Ignored names:", ignored_names)
+        logger.debug("Out path:", out_path)
+        logger.debug("In name:", in_name)
+        logger.debug("Out name:", out_name)
+        logger.debug("Write fixed:", write_fixed)
+        logger.debug("Write target:", fixed_path)
 
     fixed_list = []
     
@@ -500,12 +513,12 @@ def fix_w_basis_dir(in_path: str, ignored_names: list[str], out_path: str,
             # skip if ignored
             if dir.name in ignored_names:
                 if debug:
-                    print(dir.name, "is ignored! Skipping...")
+                    logger.debug(dir.name, "is ignored! Skipping...")
             else:
                 # make sure each name is a directory
                 if dir.exists() and dir.is_dir():
                     if debug:
-                        print("Current:", dir)
+                        logger.debug("Current:", dir)
                     # make a Pathlib Path object to the current target directory
                     temp_out = out / dir.name
                     # make all directories to out_path/dir
@@ -520,13 +533,13 @@ def fix_w_basis_dir(in_path: str, ignored_names: list[str], out_path: str,
                     fixed_list.append(dir.name)
 
                     if debug:
-                        print("Fixed", (dir / in_name), "to", (temp_out / out_name))
+                        logger.debug("Fixed", (dir / in_name), "to", (temp_out / out_name))
                 else:
                     if debug:
-                        print(dir, "does not exist or is not a directory! Skipping...")
+                        logger.debug(dir, "does not exist or is not a directory! Skipping...")
     else:
         if debug:
-            print(in_path, "does not exist or is not a directory! Skipping...")
+            logger.debug(in_path, "does not exist or is not a directory! Skipping...")
 
     if (write_fixed):
         # add each name with linebreak
@@ -553,7 +566,7 @@ def run(entry: Path, timing = False, debug = False):
     run_path = entry / "run"
     if not run_path.exists() or not run_path.is_file():
         if debug:
-            print("No run file found. Skipping...")
+            logger.debug("No run file found. Skipping...")
         time_dict = {"name":    entry.name,
                     "start":   0,
                     "end":     0,
@@ -561,14 +574,14 @@ def run(entry: Path, timing = False, debug = False):
         return time_dict
 
     if debug:
-        print(entry.name, "started!")
-        print("Path: " + str(entry))
+        logger.debug(entry.name, "started!")
+        logger.debug("Path: " + str(entry))
         # print((entry / "log").exists())
 
     result = subprocess.run(["./run"], shell=True,cwd=str(entry), text=True)
     if debug:
-        print("Stdout: " + str(result.stdout))
-        print(entry.name, "finished!")
+        logger.debug("Stdout: " + str(result.stdout))
+        logger.debug(entry.name, "finished!")
     
     end_time = datetime.datetime.now()
 
@@ -577,10 +590,10 @@ def run(entry: Path, timing = False, debug = False):
                  "end":     end_time,
                  "elapsed": end_time - start_time}
     if timing:
-        print("--- Timing Info ---")
-        print("Start time:", start_time)
-        print("End time:", end_time)
-        print("Elapsed time:", time_dict['elapsed'])
+        logger.info("--- Timing Info ---")
+        logger.info("Start time:", start_time)
+        logger.info("End time:", end_time)
+        logger.info("Elapsed time:", time_dict['elapsed'])
     
     return time_dict
 
@@ -604,12 +617,12 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, clean_timing 
         time_path: Where to write timing data to, if timing is True\n
         debug: Whether to print extra information for debugging"""
     if debug:
-        print("Debug mode ON for execute_dir")
-        print("In path:", in_path)
-        print("Advanced checking:", adv_checking)
-        print("Timing:", timing)
-        print("Clean timing:", clean_timing)
-        print("Time path:", time_path)
+        logger.debug("Debug mode ON for execute_dir")
+        logger.debug("In path:", in_path)
+        logger.debug("Advanced checking:", adv_checking)
+        logger.debug("Timing:", timing)
+        logger.debug("Clean timing:", clean_timing)
+        logger.debug("Time path:", time_path)
 
     # if timing is enabled, override time_path and write CSV headers
     col = ['name', 'start', 'end', 'elapsed']
@@ -619,7 +632,7 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, clean_timing 
         # only write header if time_path does not exist yet
         if not time.exists():
             if debug:
-                print("Creating timing file at", time_path)
+                logger.debug("Creating timing file at", time_path)
             # create and write CSV header
             time.touch()
 
@@ -636,7 +649,7 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, clean_timing 
                 time_data = {}
                 add_time = timing
                 if debug:
-                    print("Current entry:", entry.name)
+                    logger.debug("Current entry:", entry.name)
                     
                 # if log does not exist, it's safe to assume that this has not been run
                 if not (entry / "log").exists():
@@ -647,7 +660,7 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, clean_timing 
                         # should only check if not converged and not at max iterations
                         # if enabled, use the same process used in collect to find iterations and convergence
                         if debug:
-                            print("Going to advanced checking!")
+                            logger.debug("Going to advanced checking!")
                         # get text from log file for parsing
                         log = Path(in_path) / entry.name / "log"
                         text = log.read_text()
@@ -663,7 +676,7 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, clean_timing 
                             # strip whitespace, then cast as int
                             num = int(text[ind:ind+4].strip())
                             if debug:
-                                print("Highest iteration:",num)
+                                logger.debug("Highest iteration:",num)
                         
                         # look for whether it converged
                         converged = False
@@ -674,8 +687,8 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, clean_timing 
                         should_check = (num != max_iterations - 1) and (not converged)
                         
                         if debug:
-                            print("Converged:", converged)
-                            print("Should check:", should_check)
+                            logger.debug("Converged:", converged)
+                            logger.debug("Should check:", should_check)
                         
                         if should_check:
                             time_data = run(entry, timing, debug)
@@ -687,7 +700,7 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, clean_timing 
                                          "elapsed": 0}
                     else:
                         if debug:
-                            print("Advanced checking is disabled. Skipping...")
+                            logger.debug("Advanced checking is disabled. Skipping...")
                         add_time = timing and not clean_timing
                         time_data = {"name":    entry.name,
                                      "start":   0,
@@ -702,10 +715,10 @@ def execute_dir(in_path: str, adv_checking = True, timing = False, clean_timing 
                         writer.writerow(time_data)
             else:
                 if debug:
-                    print(entry, "does not exist or is not a directory! Skipping...")
+                    logger.debug(entry, "does not exist or is not a directory! Skipping...")
     else:
         if debug:
-            print(in_path, "does not exist or is not a directory! Skipping...")
+            logger.debug(in_path, "does not exist or is not a directory! Skipping...")
 
 def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing = False, clean_timing = False, time_path = "timings.csv", debug = False):
     """ NOTE: This function is deprecated and will likely be removed soon.
@@ -729,14 +742,14 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
         time_path: Where to write timing data to, if timing is True\n
         debug: Whether to print extra information for debugging"""
     if debug:
-        print("Debug mode ON for execute_num")
-        print("In path:", in_path)
-        print("Start:", start)
-        print("End:", end)
-        print("Advanced checking:", adv_checking)
-        print("Timing:", timing)
-        print("Clean timing:", clean_timing)
-        print("Time path:", time_path)
+        logger.debug("Debug mode ON for execute_num")
+        logger.debug("In path:", in_path)
+        logger.debug("Start:", start)
+        logger.debug("End:", end)
+        logger.debug("Advanced checking:", adv_checking)
+        logger.debug("Timing:", timing)
+        logger.debug("Clean timing:", clean_timing)
+        logger.debug("Time path:", time_path)
 
     # if timing is enabled, override time_path and write CSV headers
     col = ['name', 'start', 'end', 'elapsed']
@@ -749,7 +762,7 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
         # only write header if time_path does not exist yet
         if not time.exists():
             if debug:
-                print("Creating timing file at", time_path)
+                logger.debug("Creating timing file at", time_path)
             # create and write CSV header
             time.touch()
 
@@ -770,7 +783,7 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
                 time_data = {}
                 add_time = timing
                 if debug:
-                    print("Current entry:", entry.name)
+                    logger.debug("Current entry:", entry.name)
                     
                 # if log does not exist, it's safe to assume that this has not been run
                 if not (entry / "log").exists():
@@ -781,7 +794,7 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
                         # should only check if not converged and not at max iterations
                         # if enabled, use the same process used in collect to find iterations and convergence
                         if debug:
-                            print("Going to advanced checking!")
+                            logger.debug("Going to advanced checking!")
                         # get text from log file for parsing
                         log = Path(in_path) / entry.name / "log"
                         text = log.read_text()
@@ -797,7 +810,7 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
                             # strip whitespace, then cast as int
                             num = int(text[ind:ind+4].strip())
                             if debug:
-                                print("Highest iteration:",num)
+                                logger.debug("Highest iteration:",num)
                         
                         # look for whether it converged
                         converged = False
@@ -808,8 +821,8 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
                         should_check = (num != max_iterations - 1) and (not converged)
                         
                         if debug:
-                            print("Converged:", converged)
-                            print("Should check:", should_check)
+                            logger.debug("Converged:", converged)
+                            logger.debug("Should check:", should_check)
                         
                         if should_check:
                             time_data = run(entry, timing, debug)
@@ -822,7 +835,7 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
                                          "elapsed": 0}
                     else:
                         if debug:
-                            print("Advanced checking is disabled. Skipping...")
+                            logger.debug("Advanced checking is disabled. Skipping...")
                         # ignore if clean_timing is True
                         add_time = timing and not clean_timing
                         time_data = {"name":    entry.name,
@@ -838,10 +851,10 @@ def execute_num(in_path: str, start: int, end: int, adv_checking = True, timing 
                         writer.writerow(time_data)
             else:
                 if debug:
-                    print(entry, "does not exist or is not a directory! Skipping...")
+                    logger.debug(entry, "does not exist or is not a directory! Skipping...")
     else:
         if debug:
-            print(in_path, "does not exist or is not a directory! Skipping...")
+            logger.debug(in_path, "does not exist or is not a directory! Skipping...")
 
 def execute(in_path: str, adv_checking = True, timing = False, clean_timing = False, time_path = "timings.csv", debug = False):
     """ Executes the run script for a single valid directory at in_path. Unlike run(), this
@@ -856,12 +869,12 @@ def execute(in_path: str, adv_checking = True, timing = False, clean_timing = Fa
         time_path: Where to write timing data to, if timing is True\n
         debug: Whether to print extra information for debugging"""
     if debug:
-        print("Debug mode ON for execute_num")
-        print("In path:", in_path)
-        print("Advanced checking:", adv_checking)
-        print("Timing:", timing)
-        print("Clean timing:", clean_timing)
-        print("Time path:", time_path)
+        logger.debug("Debug mode ON for execute_num")
+        logger.debug("In path:", in_path)
+        logger.debug("Advanced checking:", adv_checking)
+        logger.debug("Timing:", timing)
+        logger.debug("Clean timing:", clean_timing)
+        logger.debug("Time path:", time_path)
 
     # if timing is enabled, override time_path and write CSV headers
     col = ['name', 'start', 'end', 'elapsed']
@@ -874,7 +887,7 @@ def execute(in_path: str, adv_checking = True, timing = False, clean_timing = Fa
         # only write header if time_path does not exist yet
         if not time.exists():
             if debug:
-                print("Creating timing file at", time_path)
+                logger.debug("Creating timing file at", time_path)
             # create and write CSV header
             time.touch()
 
@@ -887,7 +900,7 @@ def execute(in_path: str, adv_checking = True, timing = False, clean_timing = Fa
         time_data = {}
         add_time = timing
         if debug:
-            print("Current entry:", entry.name)
+            logger.debug("Current entry:", entry.name)
             
         # if log does not exist, it's safe to assume that this has not been run
         if not (entry / "log").exists():
@@ -899,14 +912,14 @@ def execute(in_path: str, adv_checking = True, timing = False, clean_timing = Fa
                 cat = get_state_cat(str(entry))
 
                 if debug:
-                    print("Going to advanced checking!")
-                    print(f"State category: {cat}")
+                    logger.debug("Going to advanced checking!")
+                    logger.debug(f"State category: {cat}")
 
                 # only need to check if category is WARN
                 should_check = cat == "WARN"
                 
                 if debug:
-                    print("Should check:", should_check)
+                    logger.debug("Should check:", should_check)
                 
                 if should_check:
                     time_data = run(entry, timing, debug)
@@ -919,7 +932,7 @@ def execute(in_path: str, adv_checking = True, timing = False, clean_timing = Fa
                                     "elapsed": 0}
             else:
                 if debug:
-                    print("Advanced checking is disabled. Skipping...")
+                    logger.debug("Advanced checking is disabled. Skipping...")
                 # ignore if clean_timing is True
                 add_time = timing and not clean_timing
                 time_data = {"name":    entry.name,
@@ -935,7 +948,7 @@ def execute(in_path: str, adv_checking = True, timing = False, clean_timing = Fa
                 writer.writerow(time_data)
     else:
         if debug:
-            print(entry, "does not exist or is not a directory! Skipping...")
+            logger.debug(entry, "does not exist or is not a directory! Skipping...")
 
 def to_csv(dir_path: str, output: str, debug = False):
     """ Reads name, log, iteration, convergence, and free_energy
@@ -967,7 +980,7 @@ def to_csv(dir_path: str, output: str, debug = False):
                 temp_data['log_exists'] = True
 
                 if debug:
-                    print(dir_path + "/" + entry.name)
+                    logger.debug(dir_path + "/" + entry.name)
                 text = log.read_text()
                 ind = text.rfind("Iteration  ")
                 if ind != -1:
@@ -978,7 +991,7 @@ def to_csv(dir_path: str, output: str, debug = False):
                     num = int(text[ind:ind+4].strip())
                     temp_data['iterations'] = num
                     num_it += 1
-                    print(num)
+                    logger.info(num)
                 else:
                     temp_data['iterations'] = -1
                 
@@ -989,7 +1002,7 @@ def to_csv(dir_path: str, output: str, debug = False):
                     converged = True
                     num_conv += 1
                 temp_data['converged'] = converged
-                print(converged)
+                logger.info(converged)
 
                 ind = text.find("fHelmholtz")
                 if ind != -1:
@@ -1013,9 +1026,9 @@ def to_csv(dir_path: str, output: str, debug = False):
             # add dict of data to bigger list
             data.append(temp_data)
     if debug:
-        print("Amount with iterations:", num_it)
-        print("Amount converged:", num_conv)
-        print("Percent convergence:", (num_conv / num_it))
+        logger.debug("Amount with iterations:", num_it)
+        logger.debug("Amount converged:", num_conv)
+        logger.debug("Percent convergence:", (num_conv / num_it))
 
     # make sure that the parent directories exists
     Path(output).parent.mkdir(parents = True, exist_ok = True)
@@ -1059,7 +1072,7 @@ def to_csv_num(dir_path: str, num_start: int, num_end: int, output: str, debug =
                 temp_data['log_exists'] = True
 
                 if debug:
-                    print(dir_path + "/" + entry.name)
+                    logger.debug(dir_path + "/" + entry.name)
                 text = log.read_text()
                 ind = text.rfind("Iteration  ")
                 if ind != -1:
@@ -1071,7 +1084,7 @@ def to_csv_num(dir_path: str, num_start: int, num_end: int, output: str, debug =
                     temp_data['iterations'] = num
                     num_it += 1
                     if debug:
-                        print(num)
+                        logger.debug(num)
                 else:
                     temp_data['iterations'] = -1
                     
@@ -1084,7 +1097,7 @@ def to_csv_num(dir_path: str, num_start: int, num_end: int, output: str, debug =
                     num_conv += 1
                 temp_data['converged'] = converged
                 if debug:
-                    print(converged)
+                    logger.debug(converged)
 
                 ind = text.find("fHelmholtz")
                 if ind != -1:
@@ -1108,9 +1121,9 @@ def to_csv_num(dir_path: str, num_start: int, num_end: int, output: str, debug =
             # add dict of data to bigger list
             data.append(temp_data)
     if debug:
-        print("Amount with iterations:", num_it)
-        print("Amount converged:", num_conv)
-        print("Percent convergence:", (num_conv / num_it))
+        logger.debug("Amount with iterations:", num_it)
+        logger.debug("Amount converged:", num_conv)
+        logger.debug("Percent convergence:", (num_conv / num_it))
 
     with open(output, "w") as f:
         writer = csv.DictWriter(f, fieldnames=col)
@@ -1129,12 +1142,12 @@ def is_close(item_1: float, item_2: float, epsilon: float, debug = False):
     debug: Whether to print extra information for debugging"""
     val = abs(item_2 - item_1) < epsilon
     if debug:
-        print("----- Tol Checker -----")
-        print("Item 1:", item_1)
-        print("Item 2:", item_2)
-        print("Epsilon:", epsilon)
-        print("Difference:", (item_2 - item_1))
-        print("Result:", val)
+        logger.debug("----- Tol Checker -----")
+        logger.debug("Item 1:", item_1)
+        logger.debug("Item 2:", item_2)
+        logger.debug("Epsilon:", epsilon)
+        logger.debug("Difference:", (item_2 - item_1))
+        logger.debug("Result:", val)
     return val
 
 def find_neighbors(data: list[float], epsilon = 0.00001, excluded_vals = [],
@@ -1155,11 +1168,11 @@ def find_neighbors(data: list[float], epsilon = 0.00001, excluded_vals = [],
     NOTE: Results may vary based on how the data is sorted.
     This function reads in the order of the provided list."""
     if debug:
-        print("Debug mode ON for find_neighbors")
-        print("Raw data:", data)
-        print("Epsilon:", epsilon)
-        print("Excluded values:", excluded_vals)
-        print("Debug for tolerance calculations:", tol_debug)
+        logger.debug("Debug mode ON for find_neighbors")
+        logger.debug("Raw data:", data)
+        logger.debug("Epsilon:", epsilon)
+        logger.debug("Excluded values:", excluded_vals)
+        logger.debug("Debug for tolerance calculations:", tol_debug)
 
     cands = []
     nums = {}
@@ -1167,24 +1180,24 @@ def find_neighbors(data: list[float], epsilon = 0.00001, excluded_vals = [],
         i -= const
         found_cand = False
         if tol_debug:
-                print("Searching for exclusions...")
+                logger.debug("Searching for exclusions...")
         for j in excluded_vals:
             if is_close(i, j, epsilon, tol_debug):
                 # print on debug bc it's more important info
                 if debug:
-                    print("Found exclusion: " + str(j) + "!")
+                    logger.debug("Found exclusion: " + str(j) + "!")
                 # if it should be excluded, skip the rest of the search
                 found_cand = True
                 break
         # don't start searching if it should be excluded
         if not found_cand:
             if tol_debug:
-                print("Searching for candidates...")
+                logger.debug("Searching for candidates...")
             for j in cands:
                 if is_close(i, j, epsilon, tol_debug):
                     # print on debug bc it's more important info
                     if debug:
-                        print("Found candidate: " + str(j) + "!")
+                        logger.debug("Found candidate: " + str(j) + "!")
                     found_cand = True
                     if j in nums:
                         nums[j] += 1
@@ -1195,12 +1208,12 @@ def find_neighbors(data: list[float], epsilon = 0.00001, excluded_vals = [],
                     break
         if not found_cand:
             if debug:
-                print("No candidate or exclusion found. Creating new candidate:", i)
+                logger.debug("No candidate or exclusion found. Creating new candidate:", i)
             cands.append(i)
             nums[i] = 1
     if debug:
-        print("Candidates:", cands)
-        print("Numbers:", nums)
+        logger.debug("Candidates:", cands)
+        logger.debug("Numbers:", nums)
 
     return nums
 
@@ -1223,11 +1236,11 @@ def find_neighbors_list(data: list[float], names: list[str], epsilon = 0.00001,
     NOTE: Results may vary based on how the data is sorted.
     This function reads in the order of the provided list."""
     if debug:
-        print("Debug mode ON for find_neighbors")
-        print("Raw data:", data)
-        print("Epsilon:", epsilon)
-        print("Excluded values:", excluded_vals)
-        print("Debug for tolerance calculations:", tol_debug)
+        logger.debug("Debug mode ON for find_neighbors")
+        logger.debug("Raw data:", data)
+        logger.debug("Epsilon:", epsilon)
+        logger.debug("Excluded values:", excluded_vals)
+        logger.debug("Debug for tolerance calculations:", tol_debug)
 
     cands = []
     nums = {}
@@ -1235,24 +1248,24 @@ def find_neighbors_list(data: list[float], names: list[str], epsilon = 0.00001,
         i -= const
         found_cand = False
         if tol_debug:
-                print("Searching for exclusions...")
+                logger.debug("Searching for exclusions...")
         for j in excluded_vals:
             if is_close(i, j, epsilon, tol_debug):
                 # print on debug bc it's more important info
                 if debug:
-                    print("Found exclusion: " + str(j) + "!")
+                    logger.debug("Found exclusion: " + str(j) + "!")
                 # if it should be excluded, skip the rest of the search
                 found_cand = True
                 break
         # don't start searching if it should be excluded
         if not found_cand:
             if tol_debug:
-                print("Searching for candidates...")
+                logger.debug("Searching for candidates...")
             for j in cands:
                 if is_close(i, j, epsilon, tol_debug):
                     # print on debug bc it's more important info
                     if debug:
-                        print("Found candidate: " + str(j) + "!")
+                        logger.debug("Found candidate: " + str(j) + "!")
                     found_cand = True
                     if j in nums:
                         name = names[data.index(i)]
@@ -1267,12 +1280,12 @@ def find_neighbors_list(data: list[float], names: list[str], epsilon = 0.00001,
                     break
         if not found_cand:
             if debug:
-                print("No candidate or exclusion found. Creating new candidate:", i)
+                logger.debug("No candidate or exclusion found. Creating new candidate:", i)
             cands.append(i)
             nums[i] = [names[data.index(i)]]
     if debug:
-        print("Candidates:", cands)
-        print("Name data:", nums)
+        logger.debug("Candidates:", cands)
+        logger.debug("Name data:", nums)
 
     return nums
 
@@ -1298,9 +1311,9 @@ def read_csv_col(in_path: str, col: str, data_lambda = lambda text: text, debug 
         NOTE: This method will return a list of strings by default,
         but you may use the data_lambda parameter to modify the data (including data type)."""
     if debug:
-        print("Debug mode ON for read_csv_col")
-        print("In path:", in_path)
-        print("Col:", col)
+        logger.debug("Debug mode ON for read_csv_col")
+        logger.debug("In path:", in_path)
+        logger.debug("Col:", col)
 
     # check that a file at in_path exists
     file = Path(in_path)
@@ -1316,12 +1329,12 @@ def read_csv_col(in_path: str, col: str, data_lambda = lambda text: text, debug 
                 # now: apply lambda to allow for casting control
                 data.append(data_lambda(r[col]))
             if debug:
-                print("Data:", data)
+                logger.debug("Data:", data)
             return data
             
     else:
         if debug:
-            print(in_path, "does not exist or is not a file! Skipping...")
+            logger.debug(in_path, "does not exist or is not a file! Skipping...")
         return False
 
 def find_true_names(bools: list[bool], names: list[str]):
@@ -1347,18 +1360,18 @@ def review_csv_timings(in_path: str, sec_div = 3600, debug = False):
     debug: Whether to print extra information for debugging\n"""
 
     if debug:
-        print("--- CSV Timing Data ---")
+        logger.debug("--- CSV Timing Data ---")
 
     file = Path(in_path)
 
     if file.exists() and file.is_file():
         if debug:
-            print("Attempting to load data!")
+            logger.debug("Attempting to load data!")
         # initialize reader
         with open(in_path, "r") as f:
             reader = csv.DictReader(f = f)
             if debug:
-                print("Loaded data!")
+                logger.debug("Loaded data!")
 
             # make these unrealistic values so they are overwritten
             start = datetime.datetime(year = 9999, month = 1, day = 1)
@@ -1410,23 +1423,23 @@ def review_csv_timings(in_path: str, sec_div = 3600, debug = False):
                 sum += temp
                 amt += 1
 
-            print("Parsed data!\n")
-            print("Info for analysis:")
-            print(f"Earliest start: {start} (Name: {start_name})")
-            print(f"Latest end: {end} (Name: {end_name})")
-            print(f"Total elapsed run time: {(end - start)}\n")
-            print(f"Shortest calculation time: {short} (Name: {short_name})")
-            print(f"Longest calculation time: {long} (Name: {long_name})")
-            print(f"Total calculations: {amt}")
-            print(f"Total computing time: {sum}")
-            print(f"Average computing time: {sum / amt}")
-            print(f"Duration sections: {dur_sec_less}")
+            logger.info("Parsed data!\n")
+            logger.info("Info for analysis:")
+            logger.info(f"Earliest start: {start} (Name: {start_name})")
+            logger.info(f"Latest end: {end} (Name: {end_name})")
+            logger.info(f"Total elapsed run time: {(end - start)}\n")
+            logger.info(f"Shortest calculation time: {short} (Name: {short_name})")
+            logger.info(f"Longest calculation time: {long} (Name: {long_name})")
+            logger.info(f"Total calculations: {amt}")
+            logger.info(f"Total computing time: {sum}")
+            logger.info(f"Average computing time: {sum / amt}")
+            logger.info(f"Duration sections: {dur_sec_less}")
 
             return dur_sec_more
 
     else:
         if debug:
-            print(in_path, "does not exist or is not a file! Ignoring...")
+            logger.debug(in_path, "does not exist or is not a file! Ignoring...")
         return False
     
 def read_multi_csv(dirs: list[str], csv_cols = [("free_energy", lambda text: float(text)), ("name", lambda text: text)],
@@ -1497,11 +1510,11 @@ def improved_uniques(data: list[tuple[float, str, str]], epsilon = 0.00001, excl
     Note that this will print several lines for every entry in data\n
     debug: Whether to print extra information for debugging. Defaults to False\n"""
     if debug:
-        print("Debug mode ON for find_neighbors")
-        print("Raw data:", data)
-        print("Epsilon:", epsilon)
-        print("Excluded values:", excluded_vals)
-        print("Debug for tolerance calculations:", tol_debug)
+        logger.debug("Debug mode ON for find_neighbors")
+        logger.debug("Raw data:", data)
+        logger.debug("Epsilon:", epsilon)
+        logger.debug("Excluded values:", excluded_vals)
+        logger.debug("Debug for tolerance calculations:", tol_debug)
 
 
     cands = []
@@ -1510,40 +1523,40 @@ def improved_uniques(data: list[tuple[float, str, str]], epsilon = 0.00001, excl
         i -= const
         found_cand = False
         if tol_debug:
-                print("Searching for exclusions...")
+                logger.debug("Searching for exclusions...")
         for j in excluded_vals:
             if is_close(i, j, epsilon, tol_debug):
                 # print on debug bc it's more important info
                 if debug:
-                    print("Found exclusion: " + str(j) + "!")
+                    logger.debug("Found exclusion: " + str(j) + "!")
                 # if it should be excluded, skip the rest of the search
                 found_cand = True
                 break
         # don't start searching if it should be excluded
         if not found_cand:
             if tol_debug:
-                print("Searching for candidates...")
+                logger.debug("Searching for candidates...")
             for j in cands:
                 if is_close(i, j, epsilon, tol_debug):
                     # print on debug bc it's more important info
                     if debug:
-                        print("Found candidate: " + str(j) + "!")
+                        logger.debug("Found candidate: " + str(j) + "!")
                     found_cand = True
                     if j in nums:
                         nums[j].append((i, name, trial,))
                     else:
-                        print("Error: A candidate was likely lost!")
+                        logger.error("Error: A candidate was likely lost!")
                         nums[j].append((i, name, trial,))
                     # you can assume that something can never match two candidates
                     break
         if not found_cand:
             if debug:
-                print("No candidate or exclusion found. Creating new candidate:", i)
+                logger.debug("No candidate or exclusion found. Creating new candidate:", i)
             cands.append(i)
             nums[i] = [(i, name, trial,)]
     if debug:
-        print("Candidates:", cands)
-        print("Numbers:", nums)
+        logger.debug("Candidates:", cands)
+        logger.debug("Numbers:", nums)
 
     return nums
 
@@ -1591,8 +1604,8 @@ def cluster_histogram(cluster: list[tuple[float, str, str]], out_path: str, colo
     trials = trial_clusters.keys()
 
     if debug:
-        print(f"Trial-sorted clusters: {trial_clusters}")
-        print(f"Trials present: {trials}")
+        logger.debug(f"Trial-sorted clusters: {trial_clusters}")
+        logger.debug(f"Trials present: {trials}")
 
     fixed_colors = []
 
@@ -1603,7 +1616,7 @@ def cluster_histogram(cluster: list[tuple[float, str, str]], out_path: str, colo
                 continue
 
     if debug:
-        print(f"Colors: {fixed_colors}")
+        logger.debug(f"Colors: {fixed_colors}")
 
     # fixed_colors = colors[:num_trials]
 
@@ -1615,7 +1628,7 @@ def cluster_histogram(cluster: list[tuple[float, str, str]], out_path: str, colo
     # print(energies)
     
     fig, ax = plt.subplots(figsize=(px_wd / dpi, px_ht / dpi), dpi=dpi)
-    print(fig.get_size_inches(), "inches")
+    logger.info(fig.get_size_inches(), "inches")
 
     # ax.figure(figsize=(6,4), dpi=500)
     # plt.xticks(np.arange(-0.04001, -0.03999, 0.000003))

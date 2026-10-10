@@ -965,6 +965,8 @@ def main():
 
     import run_scft
 
+    run_scft.set_basic_config("run_scft_" + sys.argv[1], None)
+
     logger.info("Successfully loaded run_scft!")
 
     step = 0
@@ -1187,9 +1189,4 @@ def main():
 
         step = write_step(step + 1, run_path / "step")
         
-
 main()
-
-# logging.basicConfig(level = logging.INFO, filename = "test.txt", format='%(asctime)s [%(levelname)s] %(message)s')
-
-# print(load_params(["param.json", "custom.json"])['scft_1'])
