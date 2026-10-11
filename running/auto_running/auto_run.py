@@ -965,7 +965,7 @@ def main():
 
     import run_scft
 
-    run_scft.set_basic_config(sys.argv[1].rstrip(".txt") + "_run_scft.txt", None)
+    # run_scft.set_basic_config(sys.argv[1].rstrip(".txt") + "_run_scft.txt", None)
 
     logger.info("Successfully loaded run_scft!")
 
