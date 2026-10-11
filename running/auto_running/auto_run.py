@@ -899,6 +899,20 @@ def scft_2_time(run_path: Path, param: dict):
     logger.info("[HELPER] SCFT_2_TIME (8)")
     run_scft.review_csv_timings(str(run_path / "data/scft_2_timings.csv"), sec_div = param["scft_2"]["sec_div"], debug = False)
 
+def unique_soln(run_path: Path):
+    logger.info("[HELPER] UNIQUE_SOLN (8)")
+    data = run_scft.read_csv_col(str(run_path / "data/scft_2.csv"), "free_energy", lambda text: float(text), True)
+    clusters = run_scft.find_neighbors(data = data, excluded_vals = [-1], const = 0, tol_debug = False, debug = False)
+    # print("--- Original Clusters ---")
+    # print(clusters)
+
+    sorted_clusters = run_scft.find_neighbors(data = sorted(data), excluded_vals = [-1], const = 0, tol_debug = False, debug = debug)
+    # print("--- Sorted Clusters ---")
+    # print(sorted_clusters)
+
+    logger.info(f"Number of clusters (original order): {len(clusters)}")
+    logger.info(f"Number of clusters (sorted order): {len(sorted_clusters)}")
+
 def load_params(paths: list[str]):
     """ Attempts to load JSON parameters from all file paths in paths.
     This can be used to easily change small amounts of JSON parameters while
@@ -1182,10 +1196,15 @@ def main():
         step = write_step(step + 1, run_path / "step")   
 
     # Step 11: Print SCFT step 2 timing data
-    if step == 10:
+    if step == 11:
         # timing
         logger.warning("SCFT_2_TIME is currently disabled!")
         # scft_2_time(run_path, param)
+
+        step = write_step(step + 1, run_path / "step")
+
+    if step == 12:
+        unique_soln(run_path)
 
         step = write_step(step + 1, run_path / "step")
         
