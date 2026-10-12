@@ -906,7 +906,7 @@ def unique_soln(run_path: Path):
     # print("--- Original Clusters ---")
     # print(clusters)
 
-    sorted_clusters = run_scft.find_neighbors(data = sorted(data), excluded_vals = [-1], const = 0, tol_debug = False, debug = debug)
+    sorted_clusters = run_scft.find_neighbors(data = sorted(data), excluded_vals = [-1], const = 0, tol_debug = False, debug = False)
     # print("--- Sorted Clusters ---")
     # print(sorted_clusters)
 
